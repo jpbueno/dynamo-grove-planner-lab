@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynamo Planner &amp; Grove &mdash; Interactive Course</title>
+<style>
+:root {
+  --nv-green: #76b900;
+  --nv-green-dark: #8fd400;
+  --nv-green-light: #1a2e00;
+  --nv-green-xlight: #111d00;
+  --ink: #e8e8e8;
+  --ink-mid: #b0b0b0;
+  --ink-soft: #888888;
+  --border: #2a2a2a;
+  --bg: #0a0a0a;
+  --bg-card: #141414;
+  --bg-alt: #1a1a1a;
+  --accent-blue: #3d9aff;
+  --accent-amber: #ef9100;
+  --accent-red: #e52020;
+  --card-radius: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink-mid); line-height: 1.6; font-size: 15px; }
+code, pre { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; }
+
+.nav { position: sticky; top: 0; z-index: 100; background: var(--bg-card); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 1rem; }
+.nav-inner { max-width: 100%; margin: 0 auto; display: flex; align-items: center; gap: 1rem; height: 54px; overflow-x: auto; }
+.nav-badge { background: var(--nv-green); color: #fff; font-weight: 700; font-size: 11px; padding: 3px 10px; border-radius: 6px; letter-spacing: .5px; white-space: nowrap; }
+.nav-links { display: flex; gap: .25rem; list-style: none; }
+.nav-links a { text-decoration: none; color: var(--ink-soft); font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 8px; transition: all .2s; white-space: nowrap; }
+.nav-links a:hover { color: #fff; background: rgba(118,185,0,0.15); }
+.nav-links a.active { color: var(--nv-green); background: rgba(118,185,0,0.2); }
+
+.hero { background: linear-gradient(135deg, #0a0a0a 0%, #0d1a00 100%); padding: 2rem 1rem 1.5rem; }
+.hero-inner { max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: 1fr 340px; gap: 2.5rem; align-items: start; }
+.hero .hero-product { font-size: 2.4rem; color: var(--nv-green); font-weight: 700; line-height: 1.15; margin-bottom: .15rem; }
+.hero h1 { font-size: 1.8rem; color: var(--ink); line-height: 1.2; margin-bottom: .5rem; }
+.hero .subtitle { font-size: 1.1rem; color: var(--ink-soft); margin-bottom: 1rem; }
+.hero .tagline { font-size: .95rem; color: var(--ink-mid); max-width: 600px; }
+.version-badge { display: inline-block; background: rgba(118,185,0,0.15); color: var(--nv-green); font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 6px; margin-left: .5rem; letter-spacing: .5px; vertical-align: middle; }
+.tldr { background: var(--bg-card); border: 1px solid rgba(118,185,0,0.3); border-top: 3px solid var(--nv-green); border-radius: var(--card-radius); padding: 1.5rem; }
+.tldr h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--nv-green-dark); margin-bottom: .75rem; }
+.tldr ol { padding-left: 1.25rem; }
+.tldr li { font-size: .9rem; margin-bottom: .5rem; color: var(--ink-mid); }
+.tldr li strong { color: var(--ink); }
+.glance-strip { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; align-items: stretch; margin: 2rem 0 0; }
+.glance-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 1.25rem 1.5rem; }
+.glance-card .glance-icon { font-size: 1.8rem; margin-bottom: .5rem; display: block; }
+.glance-card h3 { font-size: 1.05rem; color: var(--ink); margin-bottom: .35rem; }
+.glance-card .glance-one { font-size: .9rem; color: var(--ink-mid); font-weight: 500; margin-bottom: .5rem; }
+.glance-card .glance-sub { font-size: .8rem; color: var(--ink-soft); line-height: 1.5; }
+.glance-plus { display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: var(--nv-green); padding: 0 1rem; }
+
+.section { padding: 2rem 1rem; }
+.section:nth-child(even) { background: var(--bg-alt); }
+.section-inner { max-width: 100%; margin: 0 auto; }
+.section-pip { display: flex; align-items: center; gap: .75rem; margin-bottom: .25rem; }
+.pip { width: 10px; height: 10px; border-radius: 50%; background: var(--nv-green); flex-shrink: 0; }
+.section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--nv-green-dark); font-weight: 600; }
+.section-inner > h2 { font-size: 1.6rem; color: var(--ink); margin-bottom: .25rem; }
+.section-desc { color: var(--ink-soft); font-size: .95rem; margin-bottom: 2rem; max-width: 700px; }
+
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 1.5rem; transition: box-shadow .2s; }
+.card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+.card-green { border-top: 3px solid var(--nv-green); }
+.card-blue { border-top: 3px solid var(--accent-blue); }
+.card-amber { border-top: 3px solid var(--accent-amber); }
+.card h4 { font-size: .85rem; text-transform: uppercase; letter-spacing: .5px; margin-bottom: .75rem; }
+.card-green h4 { color: var(--nv-green-dark); }
+.card-blue h4 { color: var(--accent-blue); }
+.card-amber h4 { color: var(--accent-amber); }
+
+.problem-callout { background: rgba(255,85,85,0.06); border: 1px solid rgba(255,85,85,0.25); border-radius: var(--card-radius); padding: 1.25rem 1.5rem; margin-bottom: 2rem; display: flex; align-items: flex-start; gap: 1rem; }
+.problem-callout .pc-icon { font-size: 1.5rem; flex-shrink: 0; margin-top: 2px; }
+.problem-callout .pc-body { flex: 1; }
+.problem-callout h4 { color: var(--accent-red); font-size: .85rem; text-transform: uppercase; letter-spacing: .5px; margin-bottom: .35rem; }
+.problem-callout ul { padding-left: 1.1rem; font-size: .88rem; color: var(--ink-mid); }
+.problem-callout li { margin-bottom: .25rem; }
+
+.analogy { background: rgba(118,185,0,0.08); border-left: 3px solid var(--nv-green); border-radius: 0 12px 12px 0; padding: .85rem 1.1rem; margin: .75rem 0; font-size: .88rem; color: var(--ink-mid); display: flex; align-items: flex-start; gap: .6rem; }
+.analogy-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+.product-block { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--card-radius); overflow: hidden; margin-bottom: 1.5rem; }
+.product-header { padding: 1.5rem; display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.product-logo { font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 5px 14px; border-radius: 8px; white-space: nowrap; }
+.logo-green { background: rgba(118,185,0,0.15); color: var(--nv-green); }
+.logo-blue { background: rgba(77,166,255,0.15); color: var(--accent-blue); }
+.product-pitch { flex: 1; min-width: 200px; }
+.product-pitch strong { font-size: 1.05rem; color: var(--ink); display: block; }
+.product-pitch small { color: var(--ink-soft); font-size: .85rem; }
+.product-pitch small a { color: var(--accent-blue); }
+.elevator { width: 100%; font-size: .9rem; color: var(--ink-mid); margin-top: .5rem; line-height: 1.5; }
+.product-body { padding: 0 1.5rem 1.5rem; }
+.feature-list { list-style: none; padding: 0; }
+.feature-list li { padding: .5rem 0; font-size: .9rem; border-bottom: 1px solid #2a2a2a; display: flex; align-items: flex-start; gap: .5rem; }
+.feature-list li:last-child { border-bottom: none; }
+.fi { font-size: 1rem; flex-shrink: 0; }
+
+.deepdive { margin-top: 1rem; }
+.deepdive-toggle { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 10px; padding: 10px 18px; font-size: .85rem; font-weight: 600; cursor: pointer; color: var(--ink-mid); display: flex; align-items: center; gap: .5rem; width: 100%; text-align: left; font-family: inherit; transition: all .2s; }
+.deepdive-toggle:hover { background: rgba(118,185,0,0.1); color: var(--nv-green); }
+.deepdive-toggle .arrow { display: inline-block; transition: transform .2s; font-size: .75rem; }
+.deepdive-toggle.open .arrow { transform: rotate(90deg); }
+.deepdive-content { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; padding: 0; }
+.deepdive-content.open { grid-template-rows: 1fr; padding: 1.25rem 0; }
+.deepdive-content > .dd-inner { overflow: hidden; }
+.deepdive-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .85rem; }
+.deepdive-content th, .deepdive-content td { padding: .6rem .8rem; border: 1px solid var(--border); text-align: left; }
+.deepdive-content th { background: var(--bg-alt); font-weight: 600; color: var(--ink); }
+.deepdive-content pre { background: #080808; color: #cdd6f4; padding: 1rem; border-radius: 10px; overflow-x: auto; font-size: .8rem; margin: .75rem 0; }
+.deepdive-content h4 { color: var(--ink); margin: 1rem 0 .5rem; font-size: .95rem; }
+
+.steps { position: relative; padding-left: 2rem; }
+.steps::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.step { display: flex; gap: 1rem; margin-bottom: 1.5rem; position: relative; }
+.step-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem; color: #fff; flex-shrink: 0; position: relative; z-index: 1; }
+.step-green .step-num { background: var(--nv-green); }
+.step-blue .step-num { background: var(--accent-blue); }
+.step-amber .step-num { background: var(--accent-amber); }
+.step-body h3 { font-size: 1rem; color: var(--ink); margin-bottom: .25rem; }
+.step-body p { font-size: .9rem; }
+
+.metric-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 1.25rem; text-align: center; }
+.metric-card .big { font-size: 2rem; font-weight: 700; color: var(--nv-green); line-height: 1.1; }
+.metric-card .label { font-size: .8rem; color: var(--ink-soft); margin-top: .35rem; }
+
+.flow-v2 { display: grid; grid-template-columns: 1fr; gap: 0; margin: 2rem 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--card-radius); overflow: hidden; }
+.flow-row { display: flex; align-items: center; gap: .75rem; padding: .85rem 1.25rem; border-bottom: 1px solid #2a2a2a; }
+.flow-row:last-child { border-bottom: none; }
+.flow-row .flow-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .75rem; color: #fff; flex-shrink: 0; }
+.flow-row .flow-label { font-weight: 600; font-size: .88rem; color: var(--ink); min-width: 140px; }
+.flow-row .flow-desc { font-size: .83rem; color: var(--ink-mid); flex: 1; }
+.flow-row .flow-comp { font-size: .7rem; font-weight: 600; letter-spacing: .5px; padding: 2px 8px; border-radius: 5px; text-transform: uppercase; white-space: nowrap; }
+.fc-green { background: rgba(118,185,0,0.15); color: var(--nv-green); }
+.fc-blue { background: rgba(77,166,255,0.15); color: var(--accent-blue); }
+.fc-amber { background: rgba(255,170,51,0.15); color: var(--accent-amber); }
+
+.tp-roles { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+.tp-role-btn { padding: 8px 18px; border: 1px solid var(--border); background: var(--bg-card); border-radius: 10px; font-size: .85rem; font-weight: 500; cursor: pointer; transition: all .2s; color: var(--ink-mid); font-family: inherit; }
+.tp-role-btn:hover { border-color: var(--nv-green); background: rgba(118,185,0,0.1); }
+.tp-role-btn.active { background: var(--nv-green); color: #fff; border-color: var(--nv-green); }
+.tp-panel { display: none; }
+.tp-panel.active { display: block; }
+.tp-theme { background: rgba(118,185,0,0.1); border-left: 3px solid var(--nv-green); padding: 1rem 1.25rem; border-radius: 0 12px 12px 0; margin-bottom: 1.5rem; }
+.tp-theme-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--nv-green-dark); font-weight: 600; margin-bottom: .25rem; }
+.tp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.tp-bullets { padding-left: 1.1rem; }
+.tp-bullets li { margin-bottom: .5rem; font-size: .9rem; }
+.why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem; }
+
+.faq-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--card-radius); margin-bottom: .75rem; overflow: hidden; }
+.faq-q { padding: 1rem 1.25rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; color: var(--ink); font-size: .95rem; transition: background .2s; }
+.faq-q:hover { background: rgba(118,185,0,0.08); }
+.faq-icon { font-size: 1.2rem; transition: transform .2s; color: var(--nv-green); font-weight: 400; }
+.faq-item.open .faq-icon { transform: rotate(45deg); }
+.faq-a { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; padding: 0 1.25rem; }
+.faq-item.open .faq-a { grid-template-rows: 1fr; padding: 0 1.25rem 1rem; }
+.faq-a > .faq-inner { overflow: hidden; font-size: .9rem; color: var(--ink-mid); }
+
+.glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; }
+.glossary-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+.glossary-card .gterm { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--nv-green-dark); font-weight: 700; margin-bottom: .25rem; }
+.glossary-card .def { font-size: .85rem; color: var(--ink-mid); }
+.glossary-group { margin-bottom: 1.5rem; }
+.glossary-group-header { font-size: .7rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; color: var(--nv-green); margin-bottom: .75rem; padding: .4rem .75rem; background: rgba(118,185,0,0.12); border-radius: 8px; display: inline-block; }
+
+.footer { background: var(--bg); color: #999; text-align: center; padding: 1.5rem 1rem; font-size: .8rem; }
+.footer a { color: var(--nv-green); text-decoration: none; }
+
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity .5s, transform .5s; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr; }
+  .tp-grid { grid-template-columns: 1fr; }
+  .metric-strip { grid-template-columns: repeat(2, 1fr); }
+  .why-grid { grid-template-columns: 1fr; }
+  .glance-strip { grid-template-columns: 1fr; }
+  .glance-plus { padding: .5rem 0; }
+}
+@media (max-width: 600px) { .metric-strip { grid-template-columns: 1fr; } }
+@media print {
+  .nav { display: none; }
+  .deepdive-content { grid-template-rows: 1fr !important; padding: 1.25rem 0 !important; }
+  .faq-a { grid-template-rows: 1fr !important; padding: 0 1.25rem 1rem !important; }
+  .tp-panel { display: block !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <span class="nav-badge">COURSE &middot; DYNAMO</span>
+  <ul class="nav-links">
+    <li><a href="#problem" data-section="problem">The Problem</a></li>
+    <li><a href="#products" data-section="products">Products</a></li>
+    <li><a href="#integration" data-section="integration">Integration</a></li>
+    <li><a href="#demo" data-section="demo">Live Demo</a></li>
+    <li><a href="#results" data-section="results">Results</a></li>
+    <li><a href="#talking-points" data-section="talking-points">What to Say</a></li>
+    <li><a href="#faq" data-section="faq">FAQ</a></li>
+    <li><a href="#glossary" data-section="glossary">Glossary</a></li>
+  </ul>
+</div></nav>
+
+<header class="hero"><div class="hero-inner">
+  <div>
+    <div class="hero-product">Dynamo Planner &amp; Grove</div>
+    <h1>Disaggregated Inference, Automatically Scaled</h1>
+    <p class="subtitle">Define your latency SLA. The system does the rest. <span class="version-badge">Dynamo v0.9.0</span></p>
+    <p class="tagline">Two open-source components of the NVIDIA Dynamo stack. The <strong>Planner</strong> auto-scales prefill &amp; decode GPUs to meet latency targets. <strong>Grove</strong> orchestrates pod placement with gang scheduling and NVLink-aware topology. Together: deploy-and-forget autoscaling for production LLM inference on Kubernetes.</p>
+    <div class="glance-strip">
+      <div class="glance-card"><span class="glance-icon">&#127919;</span><h3>Planner</h3><div class="glance-one">The autoscaling brain</div><div class="glance-sub">Profiles your model, watches latency metrics, and scales prefill/decode workers to meet TTFT &amp; ITL targets &mdash; every 3 minutes.</div></div>
+      <div class="glance-plus">+</div>
+      <div class="glance-card"><span class="glance-icon">&#128506;</span><h3>Grove</h3><div class="glance-one">The orchestration layer</div><div class="glance-sub">Defines your whole inference system in one CRD. Gang scheduling, topology placement, startup ordering, multi-level scaling.</div></div>
+    </div>
+  </div>
+  <div class="tldr"><h3>TL;DR &mdash; 30-Second Summary</h3><ol>
+    <li><strong>Planner</strong> is a real-time SLA-driven autoscaler that profiles your model, predicts load, and scales prefill/decode workers to meet TTFT &amp; ITL targets.</li>
+    <li><strong>Grove</strong> is a Kubernetes API that defines entire inference systems &mdash; roles, scaling groups, gang scheduling, topology-aware placement &mdash; in a single CRD.</li>
+    <li><strong>Together:</strong> Planner decides <em>how many</em> workers; Grove ensures they&rsquo;re <em>placed optimally</em> and scheduled as a unit.</li>
+    <li><strong>Disaggregated serving</strong> is the foundation &mdash; prefill and decode run on separate GPUs for independent scaling.</li>
+    <li><strong>Real results:</strong> Alibaba ACK reported 80% fewer TTFT breaches, 75% fewer TPOT breaches, with 5% fewer GPUs.</li>
+    <li><strong>Works with</strong> vLLM, TensorRT-LLM, and SGLang on any NVIDIA data center GPU.</li>
+  </ol></div>
+</div></header>
+
+<section id="problem" class="section"><div class="section-inner">
+  <div class="section-pip"><div class="pip"></div><span class="section-label">The Problem</span></div>
+  <h2>Why Vanilla Kubernetes Breaks for LLM Inference</h2>
+  <p class="section-desc">Serving models isn&rsquo;t just &ldquo;N replicas of the same pod&rdquo; anymore. Disaggregated inference demands coordination Kubernetes wasn&rsquo;t built for.</p>
+  <div class="problem-callout reveal"><div class="pc-icon">&#128293;</div><div class="pc-body"><h4>The core challenge</h4><ul>
+    <li>Prefill is <strong>compute-bound</strong>; decode is <strong>memory-bound</strong> &mdash; they need different GPUs and different scaling</li>
+    <li>Standard K8s HPA scales on CPU/memory &mdash; it <strong>can&rsquo;t reason about LLM latency</strong> (TTFT, ITL)</li>
+    <li>A decode worker without its prefill partner is useless &mdash; you need <strong>gang scheduling</strong></li>
+    <li>Workers communicating over NVLink need <strong>topology-aware placement</strong> &mdash; K8s doesn&rsquo;t understand GPU topology</li>
+    <li>Startup order matters: frontend before workers, leaders before followers &mdash; <strong>K8s has no built-in cross-pod ordering</strong></li>
+  </ul></div></div>
+  <div class="why-grid reveal">
+    <div class="card card-green"><h4>&#9889; Prefill</h4><p><strong>Compute-bound.</strong> Reads the entire prompt in one pass. Needs raw GPU horsepower &mdash; like a sprinter doing a 100m dash.</p></div>
+    <div class="card card-blue"><h4>&#128260; Decode</h4><p><strong>Memory-bound.</strong> Generates tokens one at a time from the KV Cache. Needs fast memory bandwidth &mdash; like a librarian pulling books off shelves.</p></div>
+    <div class="card card-amber"><h4>&#128161; Key Insight</h4><p>Running prefill and decode on the <em>same</em> GPU wastes capacity. <strong>Disaggregated inference</strong> puts them on separate GPUs so each is tuned for its bottleneck.</p></div>
+  </div>
+</div></section>
+
+<section id="products" class="section"><div class="section-inner">
+  <div class="section-pip"><div class="pip"></div><span class="section-label">Product Deep Dives</span></div>
+  <h2>The Components</h2>
+  <p class="section-desc">Planner decides what to scale. Grove decides where and how to place it.</p>
+
+  <div class="product-block reveal"><div class="product-header">
+    <div class="product-logo logo-green">PLANNER</div>
+    <div class="product-pitch"><strong>SLA-Driven Autoscaler for Disaggregated LLM Serving</strong><small>Part of NVIDIA Dynamo &middot; Apache 2.0</small></div>
+    <div class="elevator">Monitors real-time TTFT and ITL via Prometheus, uses profiling-backed capacity models, and independently scales prefill and decode workers to maintain your latency SLA.</div>
+  </div>
+  <div style="padding:0 1.5rem;"><div class="analogy"><span class="analogy-icon">&#128161;</span><span>Think of the Planner as a <strong>hospital triage system</strong>. It checks vital signs (TTFT/ITL metrics), predicts incoming patient load (request forecasting), and allocates the right specialists (prefill/decode workers) to meet care SLAs &mdash; all automatically.</span></div></div>
+  <div class="product-body">
+    <ul class="feature-list">
+      <li><span class="fi">&#127919;</span> <strong>SLA Targets</strong> &mdash; Define TTFT and ITL in milliseconds. The Planner computes required replicas from profiling curves.</li>
+      <li><span class="fi">&#128202;</span> <strong>Online Profiling (AIPerf)</strong> &mdash; Automated benchmarking on your specific GPU. Outputs NPZ files consumed by the Planner.</li>
+      <li><span class="fi">&#128260;</span> <strong>Correction Factors</strong> &mdash; Adapts when reality diverges from profiling. <code>actual / expected</code> compensates for prefix caching, prompt variance, hardware differences.</li>
+      <li><span class="fi">&#128200;</span> <strong>Four Load Predictors</strong> &mdash; ARIMA (trend), Kalman (smooth), Prophet (seasonal), Constant (mirror). Select via <code>--load-predictor</code>.</li>
+      <li><span class="fi">&#9881;</span> <strong>Multi-Backend</strong> &mdash; vLLM, TensorRT-LLM, SGLang. Same Planner, different <code>--backend</code> flag.</li>
+      <li><span class="fi">&#128176;</span> <strong>GPU Budget Cap</strong> &mdash; <code>--max-gpu-budget</code> sets a hard ceiling the Planner never exceeds.</li>
+      <li><span class="fi">&#128065;</span> <strong>Observation Mode</strong> &mdash; <code>--no-operation</code> shows recommendations without scaling. Safe for validation.</li>
+    </ul>
+    <div class="deepdive"><button class="deepdive-toggle" onclick="toggleDeepDive(this)"><span class="arrow">&#9654;</span> Deep Dive: Planner Algorithm &amp; Configuration</button><div class="deepdive-content"><div class="dd-inner">
+      <h4>The Planner Loop (every <code>adjustment-interval</code> seconds)</h4>
+      <pre>1. Query Prometheus &rarr; Get TTFT, ITL, request count, ISL, OSL
+2. Compute correction factors &rarr; actual_latency / profiled_latency
+3. Predict next interval load &rarr; ARIMA / Kalman / Prophet / Constant
+4. Calculate required replicas &rarr; predicted_throughput / profiled_capacity
+5. Apply constraints &rarr; max_gpu_budget, min_endpoint
+6. PATCH DGD resource &rarr; Update replica counts
+7. Operator reconciles &rarr; Scale Deployments up/down</pre>
+      <h4>Key Configuration Arguments</h4>
+      <table><tr><th>Argument</th><th>Default</th><th>Description</th></tr>
+        <tr><td><code>--ttft</code></td><td>500.0</td><td>Target Time To First Token (ms)</td></tr>
+        <tr><td><code>--itl</code></td><td>50.0</td><td>Target Inter-Token Latency (ms)</td></tr>
+        <tr><td><code>--adjustment-interval</code></td><td>180</td><td>Seconds between scaling decisions</td></tr>
+        <tr><td><code>--load-predictor</code></td><td>arima</td><td>Prediction model (arima, prophet, kalman, constant)</td></tr>
+        <tr><td><code>--max-gpu-budget</code></td><td>8</td><td>Maximum GPUs across all workers</td></tr>
+        <tr><td><code>--min-endpoint</code></td><td>1</td><td>Minimum replicas per worker type</td></tr>
+        <tr><td><code>--backend</code></td><td>vllm</td><td>Backend framework (vllm, sglang, trtllm)</td></tr>
+        <tr><td><code>--no-operation</code></td><td>false</td><td>Observation mode &mdash; logs without scaling</td></tr>
+        <tr><td><code>--no-correction</code></td><td>false</td><td>Disable correction factors</td></tr>
+      </table>
+      <h4>Correction Factor Behavior</h4>
+      <table><tr><th>Factor</th><th>Meaning</th><th>Planner Response</th></tr>
+        <tr><td>&asymp; 1.0</td><td>Reality matches profiling</td><td>No adjustment</td></tr>
+        <tr><td>&gt; 1.0</td><td>Slower than expected</td><td>Scales up (more replicas)</td></tr>
+        <tr><td>&lt; 1.0</td><td>Faster than expected (prefix caching)</td><td>Scales down</td></tr>
+      </table>
+      <h4>Load Predictor Comparison</h4>
+      <table><tr><th>Predictor</th><th>Behavior</th><th>Best For</th><th>Warm-up</th></tr>
+        <tr><td>Constant</td><td>Next = current</td><td>Fixed-rate pipelines, testing</td><td>0</td></tr>
+        <tr><td>ARIMA</td><td>Auto-ARIMA trend</td><td>Gradual ramps (chatbot traffic)</td><td>5&ndash;10 intervals</td></tr>
+        <tr><td>Kalman</td><td>Smooth tracking</td><td>Bursty/event-driven traffic</td><td>2&ndash;5 observations</td></tr>
+        <tr><td>Prophet</td><td>Seasonal patterns</td><td>Daily/weekly enterprise cycles</td><td>10&ndash;20+ intervals</td></tr>
+      </table>
+    </div></div></div>
+  </div></div>
+
+  <div class="product-block reveal"><div class="product-header">
+    <div class="product-logo logo-blue">GROVE</div>
+    <div class="product-pitch"><strong>Kubernetes API for Modern AI Inference Workloads</strong><small>Open Source &middot; Apache 2.0 &middot; <a href="https://github.com/ai-dynamo/grove">github.com/ai-dynamo/grove</a></small></div>
+    <div class="elevator">A single PodCliqueSet CRD defines your entire inference system &mdash; frontend, prefill, decode, planner &mdash; with roles, scaling groups, gang scheduling, topology placement, and startup ordering.</div>
+  </div>
+  <div style="padding:0 1.5rem;"><div class="analogy"><span class="analogy-icon">&#128161;</span><span>Think of Grove as an <strong>airport control tower</strong>. It coordinates gate assignments (topology placement), ensures all crew are ready before departure (gang scheduling), manages the departure sequence (startup ordering), and opens more runways at peak hours (multi-level autoscaling).</span></div></div>
+  <div class="product-body">
+    <ul class="feature-list">
+      <li><span class="fi">&#127959;</span> <strong>PodCliqueSet CRD</strong> &mdash; Define frontend, prefill, decode, planner as roles in one resource. Grove creates Deployments, Services, HPAs, PodGangs automatically.</li>
+      <li><span class="fi">&#129309;</span> <strong>Gang Scheduling</strong> &mdash; All pods in a scaling group are scheduled together or not at all. No partial deployments.</li>
+      <li><span class="fi">&#128506;</span> <strong>Topology-Aware Placement</strong> &mdash; Generates constraints for KAI Scheduler to co-locate pods within NVLink domains. Replicas spread across nodes.</li>
+      <li><span class="fi">&#128208;</span> <strong>Multi-Level Autoscaling</strong> &mdash; Scale PodCliques, ScalingGroups, or PodCliqueSets independently.</li>
+      <li><span class="fi">&#128290;</span> <strong>Startup Ordering</strong> &mdash; Declarative dependencies. Frontend &rarr; workers &rarr; planner.</li>
+      <li><span class="fi">&#128260;</span> <strong>Smart Rolling Updates</strong> &mdash; Maintains component relationships during updates and recovery.</li>
+    </ul>
+    <div class="deepdive"><button class="deepdive-toggle" onclick="toggleDeepDive(this)"><span class="arrow">&#9654;</span> Deep Dive: Grove Hierarchy &amp; Concepts</button><div class="deepdive-content"><div class="dd-inner">
+      <h4>PodCliqueSet Hierarchy</h4>
+      <pre>PodCliqueSet (replicas=2)
+&#9500;&#9472;&#9472; Replica 0 &mdash; network packed for performance
+&#9474;   &#9500;&#9472;&#9472; ScalingGroup "Frontend" (replicas=1, minAvailable=1)
+&#9474;   &#9474;   &#9492;&#9472;&#9472; PodClique: Frontend pods
+&#9474;   &#9500;&#9472;&#9472; ScalingGroup "Prefill" (replicas=1, minAvailable=1)
+&#9474;   &#9474;   &#9492;&#9472;&#9472; PodClique: Prefill worker pods
+&#9474;   &#9492;&#9472;&#9472; ScalingGroup "Decode" (replicas=2, minAvailable=1)
+&#9474;       &#9492;&#9472;&#9472; PodClique: Decode worker pods
+&#9492;&#9472;&#9472; Replica 1 &mdash; network spread for availability
+    &#9492;&#9472;&#9472; (identical structure on different node)</pre>
+      <h4>Concept Map</h4>
+      <table><tr><th>Concept</th><th>What It Is</th><th>Analogy</th></tr>
+        <tr><td><strong>PodClique</strong></td><td>Group of pods with same role/template</td><td>Players in the same position on a team</td></tr>
+        <tr><td><strong>ScalingGroup</strong></td><td>PodCliques that scale together</td><td>Train carriages &mdash; added/removed as a unit</td></tr>
+        <tr><td><strong>PodCliqueSet</strong></td><td>Top-level CRD for the full workload</td><td>The entire team roster and game plan</td></tr>
+        <tr><td><strong>PodGang</strong></td><td>Atomic scheduling constraint</td><td>All-or-nothing boarding &mdash; everyone boards or nobody does</td></tr>
+      </table>
+      <h4>Topology Rules</h4>
+      <table><tr><th>Rule</th><th>Scope</th><th>Effect</th></tr>
+        <tr><td>Network Packed</td><td>Within a replica</td><td>Co-locate on same node/NVLink domain for low latency</td></tr>
+        <tr><td>Network Spread</td><td>Across replicas</td><td>Distribute to different nodes for high availability</td></tr>
+      </table>
+    </div></div></div>
+  </div></div>
+</div></section>
+
+<section id="integration" class="section"><div class="section-inner">
+  <div class="section-pip"><div class="pip"></div><span class="section-label">How They Work Together</span></div>
+  <h2>Planner + Grove Integration Flow</h2>
+  <p class="section-desc">The Planner decides how many workers you need. Grove ensures they land in the right place.</p>
+  <div class="flow-v2 reveal">
+    <div class="flow-row"><div class="flow-num" style="background:var(--nv-green)">1</div><div class="flow-label">Deploy DGDR</div><div class="flow-desc">Engineer applies a DynamoGraphDeploymentRequest with model, SLA targets, and GPU budget</div><div class="flow-comp fc-green">DGDR</div></div>
+    <div class="flow-row"><div class="flow-num" style="background:var(--nv-green)">2</div><div class="flow-label">Profile Model</div><div class="flow-desc">AIPerf Online benchmarks the model on your GPUs, producing load-to-latency curves (NPZ files)</div><div class="flow-comp fc-green">PROFILER</div></div>
+    <div class="flow-row"><div class="flow-num" style="background:var(--accent-blue)">3</div><div class="flow-label">Generate DGD</div><div class="flow-desc">Dynamo Operator creates a DynamoGraphDeployment with all component specs</div><div class="flow-comp fc-blue">GROVE</div></div>
+    <div class="flow-row"><div class="flow-num" style="background:var(--accent-blue)">4</div><div class="flow-label">Create PodGangs</div><div class="flow-desc">Grove generates PodGangs and topology constraints for the KAI Scheduler</div><div class="flow-comp fc-blue">GROVE</div></div>
+    <div class="flow-row"><div class="flow-num" style="background:var(--accent-blue)">5</div><div class="flow-label">Schedule Pods</div><div class="flow-desc">KAI Scheduler gang-schedules all pods with NVLink-aware placement</div><div class="flow-comp fc-blue">SCHEDULER</div></div>
+    <div class="flow-row"><div class="flow-num" style="background:var(--nv-green)">6</div><div class="flow-label">Monitor &amp; Scale</div><div class="flow-desc">Planner queries Prometheus, predicts load, PATCHes DGD replica counts</div><div class="flow-comp fc-green">PLANNER</div></div>
+    <div class="flow-row"><div class="flow-num" style="background:var(--accent-blue)">7</div><div class="flow-label">Reconcile</div><div class="flow-desc">Grove sees updated replicas, creates/removes pods with topology constraints</div><div class="flow-comp fc-blue">GROVE</div></div>
+  </div>
+  <div class="why-grid reveal">
+    <div class="card card-green"><h4>Planner decides WHAT</h4><p>&ldquo;I need 2 decode workers and 1 prefill worker to meet 50ms ITL at current load.&rdquo;</p></div>
+    <div class="card card-blue"><h4>Grove decides WHERE</h4><p>&ldquo;Place decode workers on the same NVLink domain. Spread replicas across nodes.&rdquo;</p></div>
+    <div class="card card-amber"><h4>Together: HOW</h4><p>&ldquo;Scale atomically. No partial rollouts. No wasted GPUs. No manual intervention.&rdquo;</p></div>
+  </div>
+</div></section>
+
+<section id="demo" class="section"><div class="section-inner">
+  <div class="section-pip"><div class="pip"></div><span class="section-label">Live Demo</span></div>
+  <h2>SLA Planner on A100 GPUs</h2>
+  <p class="section-desc">A 2.5-minute demo of Dynamo autoscaling Qwen3-0.6B. Watch the Planner detect a latency breach, scale up decode, then scale back down.</p>
+  <div class="metric-strip reveal">
+    <div class="metric-card"><div class="big">20s</div><div class="label">Planner interval</div></div>
+    <div class="metric-card"><div class="big">50ms</div><div class="label">TTFT target</div></div>
+    <div class="metric-card"><div class="big">10ms</div><div class="label">ITL target</div></div>
+    <div class="metric-card"><div class="big">15 req/s</div><div class="label">Heavy load phase</div></div>
+  </div>
+  <div class="steps reveal">
+    <div class="step step-green"><div class="step-num">1</div><div class="step-body"><h3>Heavy Load (90s, 15 req/s)</h3><p>Load generator fires 15 requests/second. Within 20s the Planner detects ITL exceeding 10ms and patches the DGD: <code>VllmDecodeWorker replicas: 1 &rarr; 2</code>.</p></div></div>
+    <div class="step step-blue"><div class="step-num">2</div><div class="step-body"><h3>New Pod Appears</h3><p>Grove creates the new decode pod. KAI Scheduler places it on the same node via GPU time-slicing (2 virtual slots per physical GPU). Model loads, pod becomes Running (1/1).</p></div></div>
+    <div class="step step-amber"><div class="step-num">3</div><div class="step-body"><h3>Cool Down (60s, 1 req/s)</h3><p>Traffic drops. The Planner sees low utilization and scales decode back to 1. The extra worker is drained and its GPU slot released.</p></div></div>
+  </div>
+  <div class="analogy reveal" style="margin-top:1.5rem"><span class="analogy-icon">&#128187;</span><span><strong>Three screens to watch:</strong> Grafana (TTFT/ITL graphs with red SLA lines), Planner logs (tmux top &mdash; &ldquo;Updating decode component to desired replica count 2&rdquo;), k9s pods (tmux bottom &mdash; new pod ContainerCreating &rarr; Running).</span></div>
+  <div class="deepdive reveal" style="margin-top:1rem"><button class="deepdive-toggle" onclick="toggleDeepDive(this)"><span class="arrow">&#9654;</span> Deep Dive: Demo YAML &amp; Scripts</button><div class="deepdive-content"><div class="dd-inner">
+    <h4>DGDR Manifest</h4>
+    <pre>apiVersion: nvidia.com/v1alpha1
+kind: DynamoGraphDeploymentRequest
+metadata:
+  name: sla-planner-demo
+spec:
+  model: nvidia/Llama-3.1-Nemotron-Nano-8B-v1
+  backend: vllm
+  profilingConfig:
+    profilerImage: nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.8.1
+    config:
+      sla:
+        isl: 2048      # Average input sequence length
+        osl: 256        # Average output sequence length
+        ttft: 1000.0    # Target TTFT (ms)
+        itl: 100.0      # Target ITL (ms)
+      hardware:
+        gpuType: a100_pcie
+      planner:
+        maxGpuBudget: 2
+  autoApply: true</pre>
+    <h4>Demo Planner Overrides</h4>
+    <pre>OVERRIDES='{
+  "adjustment-interval":"20",   # Check every 20s (default 180s)
+  "itl":"10",                   # Tight ITL for visibility
+  "ttft":"50",                  # Tight TTFT
+  "max-gpu-budget":"3",         # Allow up to 3 GPUs
+  "load-predictor":"constant"   # Simple predictor for demo
+}'</pre>
+    <h4>Demo Files</h4>
+    <table><tr><th>File</th><th>Purpose</th></tr>
+      <tr><td><code>demo.sh</code></td><td>Tunes Planner, launches tmux, runs load generator</td></tr>
+      <tr><td><code>setup.sh</code></td><td>One-time: RBAC, load-gen pod, worker optimization</td></tr>
+      <tr><td><code>dgdr-sla-planner.yaml</code></td><td>Deployment request with profiling config</td></tr>
+      <tr><td><code>dgd-fixer.yaml</code></td><td>Auto-patches profiling DGDs (env vars, RBAC)</td></tr>
+      <tr><td><code>grafana-dashboard.json</code></td><td>Pre-built: TTFT, ITL, request rate, inflight</td></tr>
+      <tr><td><code>cleanup.sh</code></td><td>Full teardown of all demo resources</td></tr>
+    </table>
+  </div></div></div>
+</div></section>
+
+<section id="results" class="section"><div class="section-inner">
+  <div class="section-pip"><div class="pip"></div><span class="section-label">Results</span></div>
+  <h2>Production-Validated Performance</h2>
+  <p class="section-desc">Based on Alibaba ACK team benchmarks presented at APSARA conference (2025.09.24).</p>
+  <div class="metric-strip reveal">
+    <div class="metric-card"><div class="big">80%</div><div class="label">fewer TTFT breaches</div></div>
+    <div class="metric-card"><div class="big">75%</div><div class="label">fewer TPOT breaches</div></div>
+    <div class="metric-card"><div class="big">5%</div><div class="label">fewer GPUs allocated</div></div>
+    <div class="metric-card"><div class="big">0</div><div class="label">manual tuning required</div></div>
+  </div>
+  <div class="analogy reveal"><span class="analogy-icon">&#128200;</span><span>Better latency compliance with <em>fewer</em> GPUs. The Planner eliminates over-provisioning by right-sizing allocation every cycle.</span></div>
+</div></section>
+
+<section id="talking-points" class="section"><div class="section-inner">
+  <div class="section-pip"><div class="pip"></div><span class="section-label">Talking Points</span></div>
+  <h2>What to Say &amp; To Whom</h2>
+  <p class="section-desc">Role-specific messaging for customer conversations.</p>
+  <div class="tp-roles">
+    <button class="tp-role-btn active" onclick="switchRole(this,'tp-cto')">CTO / VP Eng</button>
+    <button class="tp-role-btn" onclick="switchRole(this,'tp-infra')">Infra / Platform</button>
+    <button class="tp-role-btn" onclick="switchRole(this,'tp-ml')">ML Engineer</button>
+    <button class="tp-role-btn" onclick="switchRole(this,'tp-app')">App Developer</button>
+  </div>
+  <div id="tp-cto" class="tp-panel active"><div class="tp-theme"><div class="tp-theme-label">Theme</div><p><strong>Planner + Grove replaces hand-tuned GPU allocation with a closed-loop autoscaler that meets latency SLAs automatically.</strong></p></div><div class="tp-grid">
+    <div class="card card-green"><h4>Open</h4><p>&ldquo;Your team hand-tunes replica counts every traffic shift. The Planner watches actual TTFT and ITL, profiles each model, and adjusts workers independently. Grove guarantees new pods land on NVLink-optimal GPUs as a gang. Alibaba saw 80% fewer TTFT breaches.&rdquo;</p></div>
+    <div class="card card-blue"><h4>Value</h4><ul class="tp-bullets"><li><strong>SLA-Driven</strong> &mdash; Define TTFT/ITL; Planner right-sizes every 3 min.</li><li><strong>Disaggregated</strong> &mdash; Prefill/decode scale independently.</li><li><strong>Adaptive</strong> &mdash; Correction factors compensate for real-world divergence.</li><li><strong>Gang Scheduling</strong> &mdash; No partial rollouts.</li></ul></div>
+    <div class="card card-amber"><h4>Objections</h4><ul class="tp-bullets"><li><em>&ldquo;We have HPA.&rdquo;</em> &rarr; HPA can&rsquo;t reason about TTFT/ITL or scale prefill vs decode independently.</li><li><em>&ldquo;Not disaggregated yet.&rdquo;</em> &rarr; Works aggregated too. Disaggregated unlocks 30&ndash;50% better util.</li><li><em>&ldquo;Too complex?&rdquo;</em> &rarr; DGDR automates it: define SLA, point to model, done.</li></ul></div>
+  </div></div>
+  <div id="tp-infra" class="tp-panel"><div class="tp-theme"><div class="tp-theme-label">Theme</div><p><strong>One PodCliqueSet CRD for the entire inference lifecycle. No custom operators needed.</strong></p></div><div class="tp-grid">
+    <div class="card card-green"><h4>Open</h4><p>&ldquo;Your platform team builds custom operators for disaggregated inference. Grove replaces that with one CRD: roles, scaling groups, startup ordering, gang scheduling. The Planner plugs in as the autoscaling brain.&rdquo;</p></div>
+    <div class="card card-blue"><h4>Value</h4><ul class="tp-bullets"><li><strong>PodCliqueSet</strong> &mdash; Creates Deployments, Services, HPAs, PodGangs.</li><li><strong>Multi-Level Scaling</strong> &mdash; PodCliques, ScalingGroups, or PodCliqueSets.</li><li><strong>max-gpu-budget</strong> &mdash; Hard ceiling on GPU consumption.</li><li><strong>Prometheus-Native</strong> &mdash; Standard ServiceMonitor.</li></ul></div>
+    <div class="card card-amber"><h4>Objections</h4><ul class="tp-bullets"><li><em>&ldquo;We have operators.&rdquo;</em> &rarr; Grove is additive &mdash; provides scheduling and topology your operators lack.</li><li><em>&ldquo;We use KEDA.&rdquo;</em> &rarr; KEDA scales throughput. Planner scales on latency SLAs with profiling.</li></ul></div>
+  </div></div>
+  <div id="tp-ml" class="tp-panel"><div class="tp-theme"><div class="tp-theme-label">Theme</div><p><strong>Profile once, auto-scale forever. Your model&rsquo;s measured latency curves become a live capacity plan.</strong></p></div><div class="tp-grid">
+    <div class="card card-green"><h4>Open</h4><p>&ldquo;You&rsquo;ve benchmarked your model. The Planner takes those profiling curves as its capacity model, measures real traffic, applies corrections, and computes exactly how many replicas you need. Set <code>--ttft=200 --itl=30</code>.&rdquo;</p></div>
+    <div class="card card-blue"><h4>Value</h4><ul class="tp-bullets"><li><strong>AIPerf</strong> &mdash; Automated profiling, NPZ output.</li><li><strong>Four Predictors</strong> &mdash; ARIMA, Kalman, Prophet, Constant.</li><li><strong>Correction Factors</strong> &mdash; Adapts every cycle.</li><li><strong>Backend-Agnostic</strong> &mdash; vLLM, TRT-LLM, SGLang.</li></ul></div>
+    <div class="card card-amber"><h4>Objections</h4><ul class="tp-bullets"><li><em>&ldquo;Profiling slow?&rdquo;</em> &rarr; 30&ndash;120 min once per model+GPU. DGDR automates it.</li><li><em>&ldquo;Traffic won&rsquo;t match?&rdquo;</em> &rarr; Correction factors adapt every cycle.</li></ul></div>
+  </div></div>
+  <div id="tp-app" class="tp-panel"><div class="tp-theme"><div class="tp-theme-label">Theme</div><p><strong>One YAML. One OpenAI-compatible endpoint. Scaling is transparent.</strong></p></div><div class="tp-grid">
+    <div class="card card-green"><h4>Open</h4><p>&ldquo;Declare model, SLA, GPU budget in one YAML. The system profiles, deploys, auto-tunes. Your app hits <code>/v1/chat/completions</code>. Scaling is invisible.&rdquo;</p></div>
+    <div class="card card-blue"><h4>Value</h4><ul class="tp-bullets"><li><strong>DGDR</strong> &mdash; Model + SLA + budget. System handles the rest.</li><li><strong>OpenAI-Compatible</strong> &mdash; Drop-in replacement.</li><li><strong>Streaming</strong> &mdash; Both streaming and non-streaming.</li></ul></div>
+    <div class="card card-amber"><h4>Objections</h4><ul class="tp-bullets"><li><em>&ldquo;Managed API?&rdquo;</em> &rarr; No SLA control, no cost transparency.</li><li><em>&ldquo;Too much infra?&rdquo;</em> &rarr; One YAML, one endpoint.</li></ul></div>
+  </div></div>
+</div></section>
+
+<section id="faq" class="section"><div class="section-inner">
+  <div class="section-pip"><div class="pip"></div><span class="section-label">FAQ</span></div>
+  <h2>Frequently Asked Questions</h2>
+  <p class="section-desc">Common questions from customers, partners, and internal teams.</p>
+  <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Does the Planner work with aggregated (non-disaggregated) serving?<span class="faq-icon">+</span></div><div class="faq-a"><div class="faq-inner">Yes. The Planner can scale a single pool of workers based on SLA targets. Disaggregated mode unlocks independent prefill/decode scaling for better utilization, but it&rsquo;s not required.</div></div></div>
+  <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How long does profiling take?<span class="faq-icon">+</span></div><div class="faq-a"><div class="faq-inner">30&ndash;120 minutes depending on model size. One-time per model+GPU combo. DGDR automates it. For TRT-LLM/SGLang, AI Configurator can estimate in ~30 seconds via simulation database.</div></div></div>
+  <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">What if my traffic doesn&rsquo;t match profiling assumptions?<span class="faq-icon">+</span></div><div class="faq-a"><div class="faq-inner">Correction factors handle this. Each cycle computes <code>actual_latency / profiled_latency</code>. If real prompts are shorter, the factor drops below 1.0 and fewer replicas are needed. Adapts continuously.</div></div></div>
+  <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Can Grove work with a scheduler other than KAI?<span class="faq-icon">+</span></div><div class="faq-a"><div class="faq-inner">Yes. Grove generates PodGang resources consumed by KAI by default, but VirtualConnector mode lets you integrate with other schedulers.</div></div></div>
+  <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">What GPUs are supported?<span class="faq-icon">+</span></div><div class="faq-a"><div class="faq-inner">Any NVIDIA data center GPU: A100, H100, H200, GB200, L40S, and more. Profiling adapts automatically.</div></div></div>
+  <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Can I use this for agentic pipelines?<span class="faq-icon">+</span></div><div class="faq-a"><div class="faq-inner">Yes. Grove&rsquo;s PodCliqueSet can model any multi-component system &mdash; tool servers, RAG retrievers, routing layers &mdash; with scaling groups and startup ordering.</div></div></div>
+  <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How does the Planner compare to KEDA or HPA?<span class="faq-icon">+</span></div><div class="faq-a"><div class="faq-inner">HPA/KEDA scale on CPU/memory/throughput. The Planner scales on latency SLAs with profiling-backed capacity models. It knows that to meet 50ms ITL at 200 req/s, you need exactly N decode replicas &mdash; KEDA can&rsquo;t compute that.</div></div></div>
+</div></section>
+
+<section id="glossary" class="section"><div class="section-inner">
+  <div class="section-pip"><div class="pip"></div><span class="section-label">Glossary</span></div>
+  <h2>Key Terms</h2>
+  <p class="section-desc">Quick reference for technical terms used throughout this course.</p>
+  <div class="glossary-group"><div class="glossary-group-header">Latency &amp; Metrics</div><div class="glossary-grid">
+    <div class="glossary-card"><div class="gterm">TTFT</div><div class="def">Time To First Token. How long from sending a prompt until the first response token appears.</div></div>
+    <div class="glossary-card"><div class="gterm">ITL</div><div class="def">Inter-Token Latency. Delay between consecutive response tokens. Low ITL = fluid streaming.</div></div>
+    <div class="glossary-card"><div class="gterm">TPOT</div><div class="def">Time Per Output Token. Total generation time divided by token count.</div></div>
+    <div class="glossary-card"><div class="gterm">ISL / OSL</div><div class="def">Input/Output Sequence Length. Average token counts used during profiling.</div></div>
+    <div class="glossary-card"><div class="gterm">SLA</div><div class="def">Service Level Agreement. Contractual performance thresholds (e.g., TTFT &lt; 200ms).</div></div>
+  </div></div>
+  <div class="glossary-group"><div class="glossary-group-header">Inference Architecture</div><div class="glossary-grid">
+    <div class="glossary-card"><div class="gterm">Disaggregated Inference</div><div class="def">Separates prefill and decode onto different GPU pools for independent scaling.</div></div>
+    <div class="glossary-card"><div class="gterm">Prefill</div><div class="def">First phase. Processes the entire prompt in one compute-heavy pass. Generates the KV Cache.</div></div>
+    <div class="glossary-card"><div class="gterm">Decode</div><div class="def">Second phase. Generates tokens one at a time from KV Cache. Memory-bandwidth bound.</div></div>
+    <div class="glossary-card"><div class="gterm">KV Cache</div><div class="def">Key-Value Cache. Stores intermediate computations so decode doesn&rsquo;t recompute them.</div></div>
+    <div class="glossary-card"><div class="gterm">NIXL</div><div class="def">NVIDIA Inference eXchange Library. Handles efficient KV cache transfers between workers.</div></div>
+  </div></div>
+  <div class="glossary-group"><div class="glossary-group-header">Planner Concepts</div><div class="glossary-grid">
+    <div class="glossary-card"><div class="gterm">Correction Factor</div><div class="def">Ratio of actual vs. profiled latency. Adapts to prefix caching, prompt variance, hardware differences.</div></div>
+    <div class="glossary-card"><div class="gterm">ARIMA</div><div class="def">AutoRegressive Integrated Moving Average. Statistical model for trend-based load prediction.</div></div>
+    <div class="glossary-card"><div class="gterm">Interpolation Model</div><div class="def">Lookup table mapping request rates to expected latency, built from profiling data.</div></div>
+    <div class="glossary-card"><div class="gterm">DGDR</div><div class="def">DynamoGraphDeploymentRequest. The YAML manifest to deploy a model with SLA targets.</div></div>
+    <div class="glossary-card"><div class="gterm">DGD</div><div class="def">DynamoGraphDeployment. The running deployment Grove manages after profiling completes.</div></div>
+  </div></div>
+  <div class="glossary-group"><div class="glossary-group-header">Grove / Kubernetes</div><div class="glossary-grid">
+    <div class="glossary-card"><div class="gterm">PodClique</div><div class="def">Group of pods with same role/template (e.g., all decode workers). Scales independently.</div></div>
+    <div class="glossary-card"><div class="gterm">ScalingGroup</div><div class="def">Bundle of tightly-coupled PodCliques that scale as one unit.</div></div>
+    <div class="glossary-card"><div class="gterm">PodCliqueSet</div><div class="def">Top-level Grove CRD. Describes the full inference workload in a single resource.</div></div>
+    <div class="glossary-card"><div class="gterm">PodGang</div><div class="def">Scheduling constraint for atomic pod groups. All scheduled together or not at all.</div></div>
+    <div class="glossary-card"><div class="gterm">Gang Scheduling</div><div class="def">Ensures related pods all land or none do. Prevents half-deployed broken pipelines.</div></div>
+    <div class="glossary-card"><div class="gterm">KAI Scheduler</div><div class="def">NVIDIA&rsquo;s AI-aware K8s scheduler with GPU topology and NVLink-aware placement.</div></div>
+    <div class="glossary-card"><div class="gterm">NVLink</div><div class="def">NVIDIA&rsquo;s high-bandwidth GPU interconnect, 5&ndash;10x faster than PCIe.</div></div>
+    <div class="glossary-card"><div class="gterm">GPU Time-Slicing</div><div class="def">Multiple pods share one physical GPU by taking turns. Used in demos for scaling without extra hardware.</div></div>
+  </div></div>
+</div></section>
+
+<footer class="footer">
+  <p>NVIDIA Dynamo &middot; Planner &amp; Grove &middot; Open Source (Apache 2.0)</p>
+  <p style="margin-top:.35rem">Grove: <a href="https://github.com/ai-dynamo/grove">github.com/ai-dynamo/grove</a> &middot; Dynamo: <a href="https://github.com/ai-dynamo/dynamo">github.com/ai-dynamo/dynamo</a></p>
+</footer>
+
+<script>
+function switchRole(btn, id) {
+  document.querySelectorAll('.tp-role-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tp-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+function toggleDeepDive(btn) {
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open');
+}
+function toggleFaq(el) {
+  el.closest('.faq-item').classList.toggle('open');
+}
+const navLinks = document.querySelectorAll('.nav-links a');
+const sections = document.querySelectorAll('.section, .hero');
+function updateNav() {
+  let current = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 100) current = s.id || ''; });
+  navLinks.forEach(a => a.classList.toggle('active', a.dataset.section === current));
+}
+window.addEventListener('scroll', updateNav, { passive: true });
+updateNav();
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+}, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

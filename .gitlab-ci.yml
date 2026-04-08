@@ -1,0 +1,11 @@
+pages:
+  stage: deploy
+  script:
+    - mkdir -p public
+    - cp wizard.html public/index.html
+    - cp index.html public/kbyg.html
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
