@@ -2,8 +2,6 @@ image: alpine:latest
 
 pages:
   stage: deploy
-  tags:
-    - docker
   script:
     - mkdir -p public
     - cp wizard.html public/index.html
