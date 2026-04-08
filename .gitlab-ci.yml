@@ -2,6 +2,7 @@ pages:
   stage: deploy
   tags:
     - pages
+  image: busybox:latest
   script:
     - mkdir -p public
     - cp wizard.html public/index.html
