@@ -1,7 +1,7 @@
-image: alpine:latest
-
 pages:
   stage: deploy
+  tags:
+    - pages
   script:
     - mkdir -p public
     - cp wizard.html public/index.html
