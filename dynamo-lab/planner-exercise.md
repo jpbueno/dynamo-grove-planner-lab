@@ -73,8 +73,10 @@ In your main terminal, send requests at a moderate rate for 90 seconds:
 
 ```bash
 # Terminal 1
-python3 /home/ubuntu/dynamo-lab/load-gen.py --rps 5 --duration 90
+python3 ~/dynamo-lab/load-gen.py --rps 5 --duration 90
 ```
+
+> The load generator auto-discovers the frontend service IP via `kubectl`. You can also pass it explicitly with `--url http://<frontend-ip>:8000`.
 
 The load generator sends requests with varied prompt lengths (short, medium, long) to simulate real workloads.
 
