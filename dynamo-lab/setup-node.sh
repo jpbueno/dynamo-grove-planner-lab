@@ -22,7 +22,13 @@ POD_CIDR="${POD_CIDR:-10.244.0.0/16}"
 DYNAMO_VERSION="${DYNAMO_VERSION:-0.9.0}"
 DYNAMO_NAMESPACE="${DYNAMO_NAMESPACE:-dynamo}"
 NGC_HELM_BASE="https://helm.ngc.nvidia.com/nvidia/ai-dynamo/charts"
-LAB_DIR="${LAB_DIR:-$HOME/dynamo-lab}"
+# Place lab files in the calling user's home (not root's) so they're accessible
+if [[ -n "${SUDO_USER:-}" ]]; then
+  _SUDO_HOME="$(eval echo "~${SUDO_USER}")"
+  LAB_DIR="${LAB_DIR:-${_SUDO_HOME}/dynamo-lab}"
+else
+  LAB_DIR="${LAB_DIR:-$HOME/dynamo-lab}"
+fi
 
 # Resolve the directory this script lives in (dynamo-lab/ inside the repo)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

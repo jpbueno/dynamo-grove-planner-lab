@@ -36,46 +36,44 @@ Instead of copying and pasting kubectl commands, you'll explore the Planner by a
 
 ## Background
 
-The Dynamo Planner is an SLA-driven autoscaler for disaggregated LLM serving. It reads metrics from Prometheus, predicts future load, and scales prefill/decode workers to meet SLA targets.
+The Dynamo Planner is an SLA-driven autoscaler for disaggregated LLM serving. It reads metrics from Prometheus, predicts future load, and scales prefill/decode workers to meet SLA targets. When the Planner decides to scale, it writes new replica counts to the `DynamoGraphDeployment`, which Grove turns into pods.
 
-In this lab the workers are mock inference engines (no GPUs needed). The mocker reports a constant TTFT of ~10ms. We'll tighten the SLA target below that threshold so the Planner is forced to scale — simulating what happens in production when real GPUs are under heavy load.
+In this lab the workers are mock inference engines (no real GPUs). You'll scale the deployment directly through the DGD — the same mechanism the Planner uses in production — and watch pods come up and go away in real time.
 
 ---
 
 ## Exercise 1 — See what you have
 
-Ask the AI to show you the current state of the deployment — the Planner's configuration and the pods that are running.
+Ask the AI to show you the current state of the deployment.
 
 ### Prompt
 
 ```text
 Show me the Planner configuration from the DynamoGraphDeployment in the
-dynamo-lab namespace. What are the SLA targets? Then list all the pods
-running in the namespace.
+dynamo-lab namespace. What are the SLA targets and how many replicas does
+each service have? Then list all the pods running in the namespace.
 ```
 
 ### What you should learn
 
 - The Planner is configured with `"ttft":2000` (TTFT target) and `"itl":200` (ITL target)
-- The adjustment interval is 30 seconds
-- There are 4 pods running: frontend, planner, one prefill worker, one decode worker
+- Each service (Frontend, Planner, PrefillWorker, DecodeWorker) has 1 replica
+- There are 4 pods running — one per service
 
 ---
 
-## Exercise 2 — Generate load and scale the environment
+## Exercise 2 — Scale out and watch a pod spin up
 
-Lower the TTFT SLA target so it's below the mocker's ~10ms baseline, then send traffic. The Planner will detect an SLA violation and scale out.
+Ask the AI to increase the prefill worker replicas in the DGD. Then open a terminal in Cursor and watch the new pod appear.
 
 ### Prompt
 
 ```text
-Edit the DynamoGraphDeployment "dynamo-lab" in the dynamo-lab namespace and
-change the TTFT target from 2000 to 5 in the Planner's --config args. Then
-run the load generator at ~/dynamo-lab/load-gen.py at 5 requests per second
-for 120 seconds.
+Scale the PrefillWorker replicas from 1 to 2 in the DynamoGraphDeployment
+"dynamo-lab" in the dynamo-lab namespace.
 ```
 
-Once the AI confirms the load generator is running, open a terminal in Cursor and run:
+Once the AI confirms the patch, open a terminal in Cursor and run:
 
 ```bash
 kubectl get pods -n dynamo-lab
@@ -83,36 +81,41 @@ kubectl get pods -n dynamo-lab
 
 ### What you should learn
 
-- With TTFT target at 5ms and observed TTFT at ~10ms, the Planner detects an SLA violation
-- You'll see a new prefill worker pod being provisioned (status `ContainerCreating` → `Running`)
-- This is the same math that runs in production — `demand / capacity = workers needed`
+- A new prefill worker pod appears (status `ContainerCreating` → `Running`)
+- The DGD replica count is how the Planner controls scaling in production — you just did manually what the Planner does automatically when it detects SLA violations
+- Grove creates the pod through the PodClique → PodGang ownership chain
 
 ---
 
-## Exercise 3 — Stop load and watch the pod go away
+## Exercise 3 — Scale down and watch the pod terminate
 
-Stop the load and restore the original SLA target. The Planner will determine the extra workers are no longer needed.
+Scale back to 1 replica and watch the extra pod go away.
 
 ### Prompt
 
 ```text
-Stop the load generator. Change the TTFT target back to 2000 in the
-DynamoGraphDeployment. Watch the pods — does the extra worker get
-terminated?
+Scale the PrefillWorker replicas back to 1 in the DynamoGraphDeployment.
+```
+
+Then in your terminal:
+
+```bash
+kubectl get pods -n dynamo-lab
 ```
 
 ### What you should learn
 
-- After load stops and the SLA target is restored, the Planner computes that 1 worker is sufficient
 - The extra prefill worker pod terminates
-- The Planner does **not** scale down to 0 — `min_endpoint` (default: 1) keeps at least one prefill and one decode worker running to avoid cold-start delays
+- You're back to the original 4 pods
+- In production, the Planner would do this automatically when load drops and fewer workers are needed
+- The Planner does **not** scale to 0 — `min_endpoint` (default: 1) keeps at least one worker per role running to avoid cold-start delays
 
 ---
 
 ## Key Takeaways
 
-1. **The Planner is a control loop** — it runs every 30 seconds, regardless of traffic
+1. **The Planner is a control loop** — it runs every 30 seconds, reads from Prometheus, and writes replica counts to the DGD
 2. **SLA targets drive scaling** — when observed TTFT or ITL approaches the target, the Planner adds workers
 3. **Scaling is bidirectional** — workers are added under load and removed when load drops
-4. **Profiling data drives capacity math** — each worker's capacity comes from pre-run profiling of the GPU/model combination
+4. **The DGD is the control surface** — whether the Planner or an operator changes replica counts, the same Grove machinery creates and destroys pods
 5. **min_endpoint prevents scale-to-zero** — at least one worker per role is always running
