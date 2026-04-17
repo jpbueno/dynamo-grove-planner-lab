@@ -6,6 +6,26 @@
 
 ---
 
+## Step 0 — Connect to your lab instance
+
+Open a terminal and run the following command to connect Cursor to your Brev instance:
+
+```bash
+brev open <your-instance-name> cursor
+```
+
+For example:
+
+```bash
+brev open dynamo-sa-workshop-jbuenosantan-ba0543 cursor
+```
+
+> **Note:** Replace `<your-instance-name>` with the instance name assigned to you. Ask your instructor if you're unsure.
+
+This opens a remote Cursor window connected to your lab instance, where kubectl is already configured to talk to the cluster.
+
+---
+
 ## How this lab works
 
 Instead of copying and pasting kubectl commands, you'll explore Grove by asking questions in natural language. Use Claude Code in your terminal or Cursor's AI chat — the AI has full access to your cluster via kubectl.
