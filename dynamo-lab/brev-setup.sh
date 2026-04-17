@@ -11,7 +11,7 @@
 # =============================================================================
 set -euo pipefail
 
-NGC_API_KEY="${NGC_API_KEY:?Set NGC_API_KEY before running this script}"
+NGC_API_KEY="${NGC_API_KEY:?Set NGC_API_KEY as a Brev launchable environment variable}"
 LAB_REPO="https://github.com/jpbueno/dynamo-grove-planner-lab.git"
 
 echo "========================================="
