@@ -11,7 +11,10 @@
 # =============================================================================
 set -euo pipefail
 
-NGC_API_KEY="${NGC_API_KEY:?Set NGC_API_KEY as a Brev launchable environment variable}"
+# NGC API key for pulling Dynamo Helm charts from NGC registry.
+# Set via environment or hardcode here for workshop provisioning.
+# Invalidate after the workshop.
+NGC_API_KEY="${NGC_API_KEY:-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}" # disable-trufflehog: temporary workshop key, invalidated post-event
 LAB_REPO="https://github.com/jpbueno/dynamo-grove-planner-lab.git"
 
 echo "========================================="
