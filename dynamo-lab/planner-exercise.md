@@ -1,7 +1,36 @@
-# Lab Exercise: Planner — SLA-Driven Autoscaling
+# Lab Exercise: Planner — Exploring SLA-Driven Autoscaling with AI
 
 **Duration:** ~15 minutes  
-**Namespace:** `dynamo-lab`
+**Namespace:** `dynamo-lab`  
+**Tools:** Claude Code (CLI) or Cursor
+
+---
+
+## Step 0 — Connect to your lab instance
+
+Open a terminal and run the following command to connect Cursor to your Brev instance:
+
+```bash
+brev open <your-instance-name> cursor
+```
+
+For example:
+
+```bash
+brev open dynamo-sa-workshop-jbuenosantan-ba0543 cursor
+```
+
+> **Note:** Replace `<your-instance-name>` with the instance name assigned to you. Ask your instructor if you're unsure.
+
+This opens a remote Cursor window connected to your lab instance, where kubectl is already configured to talk to the cluster.
+
+---
+
+## How this lab works
+
+Instead of copying and pasting kubectl commands, you'll explore the Planner by asking questions in natural language. Use Claude Code in your terminal or Cursor's AI chat — the AI has full access to your cluster via kubectl.
+
+> **Tip:** You don't need to type the prompts below verbatim. Rephrase them in your own words — the AI will figure out what you need.
 
 ---
 
@@ -15,6 +44,7 @@ The Dynamo Planner is an SLA-driven autoscaler for disaggregated LLM serving. It
 4. **Scales** the PodCliques via the DynamoGraphDeployment or Kubernetes replica counts
 
 The SLA targets in this deployment:
+
 - **TTFT target:** 2000 ms (time to first token)
 - **ITL target:** 200 ms (inter-token latency)
 - **Adjustment interval:** 30 seconds
@@ -23,17 +53,22 @@ The SLA targets in this deployment:
 
 ## Exercise 1 — Read the Planner configuration
 
-Look at how the Planner was configured in the DGD:
+Ask your AI assistant to find and explain the Planner's configuration.
 
-```bash
-kubectl get podclique dynamo-lab-0-planner -n dynamo-lab -o json \
-  | jq '.spec.podSpec.containers[0].args'
+### Prompt
+
+```text
+Look at the Planner PodClique in the dynamo-lab namespace and extract its
+configuration arguments. Explain what each config field means — especially the
+SLA targets, the adjustment interval, and the backend type.
 ```
 
-You'll see the `--config` argument with a JSON payload. Key fields:
+### What you should learn
+
+The Planner is configured via a `--config` JSON payload. Key fields:
 
 | Field | Value | Meaning |
-|---|---|---|
+| --- | --- | --- |
 | `environment` | `kubernetes` | Planner runs in K8s mode, reads/writes DGD replicas |
 | `backend` | `mocker` | Workers are inference simulators (not real GPUs) |
 | `ttft` | 2000 | TTFT SLA target in milliseconds |
@@ -48,40 +83,46 @@ You'll see the `--config` argument with a JSON payload. Key fields:
 
 ## Exercise 2 — Watch the Planner logs in real time
 
-Open a second terminal and start tailing the planner logs. You'll watch it react to load changes you create in the main terminal.
+Ask the AI to tail the Planner's logs so you can see its control loop in action — first with no traffic.
 
-```bash
-# Terminal 2 - Keep this running
-PLANNER_POD=$(kubectl get pod -n dynamo-lab -l nvidia.com/dynamo-component=Planner \
-  -o jsonpath='{.items[0].metadata.name}')
-kubectl logs -n dynamo-lab $PLANNER_POD -f \
-  | grep --line-buffered -E "Observed|Predicted|Prefill calculation|Decode calculation|Scaling|adjustment"
+### Prompt
+
+```text
+Tail the Planner pod logs in the dynamo-lab namespace. Filter for lines that
+show observed metrics, predictions, scaling calculations, or adjustment intervals.
 ```
 
-With no traffic, you'll see:
-```
+### What you should learn
+
+With no traffic, you'll see the Planner running its control loop every 30 seconds but skipping adjustments:
+
+```text
 Observed num_req: 0.00 isl: nan osl: nan
 Observed ttft: nanms itl: nanms
 Metrics contain None or NaN values (no active requests), skipping adjustment
 ```
 
+The Planner is always running — it doesn't sleep when idle.
+
 ---
 
-## Exercise 3 — Inject load and watch the Planner observe it
+## Exercise 3 — Inject load and watch the Planner react
 
-In your main terminal, send requests at a moderate rate for 90 seconds:
+Now ask the AI to send traffic to the frontend and watch how the Planner observes and reacts to it.
 
-```bash
-# Terminal 1
-python3 ~/dynamo-lab/load-gen.py --rps 5 --duration 90
+### Prompt
+
+```text
+Run the load generator at ~/dynamo-lab/load-gen.py at 5 requests per second for
+90 seconds. While it's running, tail the Planner logs and show me the observed
+metrics and scaling calculations.
 ```
 
-> The load generator auto-discovers the frontend service IP via `kubectl`. You can also pass it explicitly with `--url http://<frontend-ip>:8000`.
+### What you should learn
 
-The load generator sends requests with varied prompt lengths (short, medium, long) to simulate real workloads.
+After 30 seconds (one Planner interval), the logs will show:
 
-After 30 seconds (one Planner interval), switch to the log terminal. You'll see the Planner report:
-```
+```text
 Observed num_req: 150.00 isl: 21.72 osl: 116.67
 Observed ttft: 9.42ms itl: 0.94ms
 Predicted load: num_req=150.00, isl=21.72, osl=116.67
@@ -89,101 +130,46 @@ Prefill calculation: 57.41(p_thpt) / 5121.58(p_engine_cap) = 1(num_p)
 Decode calculation: 17435.94(d_thpt) / 18968.95(d_engine_cap) = 1(num_d)
 ```
 
-**Read the calculation:**
+**How to read the calculation:**
+
 - `p_thpt` = predicted prefill throughput demand (tokens/s)
 - `p_engine_cap` = single prefill worker's capacity (tokens/s from profiling data)
 - `p_thpt / p_engine_cap` → rounded up → number of prefill workers needed
 
-At 5 req/s with our short prompts, the load is well within one worker's capacity, so `num_p = 1`.
+At 5 req/s the load fits within one worker's capacity, so `num_p = 1`.
+
+**Follow-up prompt — understand why it doesn't scale:**
+
+```text
+The Planner computed num_p=1 and num_d=1 even under load. Why didn't it add
+more workers? What would need to change for the Planner to scale out?
+```
+
+The AI should explain:
+
+- The mocker simulates perfect H200 GPUs — TTFT stays ~10ms regardless of load
+- The SLA target is 2000ms, so we're 200x under the limit
+- In a real deployment, TTFT rises as the prefill queue fills. When `observed_ttft` approaches the target, the Planner adds prefill workers
+- You could demonstrate scaling by lowering the TTFT target to 5ms in the DGD config (below what the mocker reports), which would trigger scale-out
 
 ---
 
-## Exercise 4 — Query the Planner's Prometheus metrics
+## Exercise 4 — Stop load and watch the Planner go idle
 
-The Planner exposes its own metrics on port 9085. Port-forward to read them:
+Stop the load generator and ask the AI what happens.
 
-```bash
-PLANNER_POD=$(kubectl get pod -n dynamo-lab -l nvidia.com/dynamo-component=Planner \
-  -o jsonpath='{.items[0].metadata.name}')
-kubectl port-forward -n dynamo-lab pod/$PLANNER_POD 9085:9085 &
+### Prompt
 
-# Query the metrics
-curl -s http://localhost:9085/metrics | grep "^planner:"
+```text
+Stop the load generator and show me the Planner logs. Does it scale down to
+zero workers when there's no traffic?
 ```
 
-Key metrics to watch:
+### What you should learn
 
-| Metric | What it tells you |
-|---|---|
-| `planner:num_p_workers` | Current prefill worker count |
-| `planner:num_d_workers` | Current decode worker count |
-| `planner:observed_ttft` | Measured TTFT over last interval (ms) |
-| `planner:observed_itl` | Measured ITL over last interval (ms) |
-| `planner:observed_request_rate` | Requests per second seen |
-| `planner:predicted_num_p` | Target number of prefill workers |
-| `planner:predicted_num_d` | Target number of decode workers |
-| `planner:gpu_hours` | Simulated GPU-hour cost of current deployment |
+The Planner logs will return to:
 
-While load is running at 5 req/s you should see:
-```
-planner:observed_request_rate 5.0
-planner:observed_ttft 9.42     # well within 2000ms SLA
-planner:predicted_num_p 1.0
-planner:predicted_num_d 1.0
-```
-
----
-
-## Exercise 5 — See the Planner read from Prometheus directly
-
-The Planner's source of truth is Prometheus, not direct pod metrics. You can see what it's reading:
-
-**Note:** Run this while load is active (Exercise 3) to see non-NaN values.
-
-```bash
-PROM_IP=$(kubectl get svc -n monitoring prometheus-kube-prometheus-prometheus \
-  -o jsonpath='{.spec.clusterIP}')
-
-# Average TTFT over last 30s (same query the Planner uses)
-curl -s "http://$PROM_IP:9090/api/v1/query" \
-  --data-urlencode 'query=increase(dynamo_frontend_time_to_first_token_seconds_sum[30s])/increase(dynamo_frontend_time_to_first_token_seconds_count[30s])' \
-  | jq '.data.result[0].value[1]'
-
-# Request count in last 30s
-curl -s "http://$PROM_IP:9090/api/v1/query" \
-  --data-urlencode 'query=increase(dynamo_frontend_requests_total[30s])' \
-  | jq '.data.result[0].value[1]'
-```
-
-This gives you the raw Prometheus values the Planner uses to make its scaling decision.
-
----
-
-## Exercise 6 — Understand why the Planner doesn't scale here
-
-With our mocker setup, TTFT stays ~10ms regardless of load (the mocker simulates perfect H200 GPUs). Since TTFT is 10ms vs. our 2000ms target — we're 200x under the limit. The Planner correctly computes that 1 prefill + 1 decode worker is sufficient.
-
-In a real deployment:
-- TTFT rises under load as the prefill queue fills
-- When `observed_ttft` approaches the target, the Planner adds prefill workers
-- When `observed_itl` approaches its target, the Planner adds decode workers
-
-You can simulate hitting the SLA by lowering the targets in the DGD:
-
-```bash
-# To demonstrate scaling, reduce the TTFT target to 5ms (below what the mocker reports)
-# (this is for demonstration only — would cause rapid scale-out)
-kubectl edit dynamographdeployment dynamo-lab -n dynamo-lab
-# Change "ttft":2000 → "ttft":5 in the planner args
-```
-
----
-
-## Exercise 7 — Stop load and watch the Planner go idle
-
-Stop the load generator (Ctrl+C or wait for it to finish). Watch the planner log:
-
-```
+```text
 New throughput adjustment interval started!
 Observed num_req: 0.00 isl: nan osl: nan
 Observed ttft: nanms itl: nanms
@@ -200,14 +186,14 @@ The Planner does **not** scale down to 0 when idle. `min_endpoint` (default: 1) 
 2. **It reads from Prometheus, not pods directly** — this means you can trace its inputs by querying Prometheus
 3. **Scaling decisions are forward-looking** — the ARIMA predictor anticipates load changes, not just reacts
 4. **Profiling data drives capacity math** — the `p_engine_cap` / `d_engine_cap` values come from pre-run profiling of the actual GPU/model combination
-5. **SLA targets are TTL + ITL** — these map to the user-facing experience: time until the first token appears, and smoothness of streaming
+5. **SLA targets are TTFT + ITL** — these map to the user-facing experience: time until the first token appears, and smoothness of streaming
 
 ---
 
 ## Reference: Planner log messages
 
 | Log message | Meaning |
-|---|---|
+| --- | --- |
 | `New throughput adjustment interval started!` | Start of a 30-second scaling cycle |
 | `Observed num_req: X` | Requests seen in the last interval from Prometheus |
 | `Prefill calculation: X / Y = Z` | demand / capacity = workers needed |
