@@ -1,0 +1,202 @@
+<section class="module" id="module-1">
+  <div class="module-content">
+
+    <!-- ── HEADER ──────────────────────────────────────────── -->
+    <div class="module-header animate-in">
+      <span class="module-number">01</span>
+      <h2 class="module-title">What If Your AI Could Scale Itself?</h2>
+      <p class="module-subtitle">Why serving large language models broke the old Kubernetes playbook &mdash; and what NVIDIA built to fix it.</p>
+    </div>
+
+    <!-- ── SCREEN 1: The Old World ─────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">The Old Playbook: Copy-Paste Your Pod</h3>
+      <p>For years, scaling a web service on <span class="term" data-definition="Kubernetes (K8s) is an open-source system that automates deploying, scaling, and managing containerized applications across clusters of machines.">Kubernetes</span> was straightforward: you had one container, and if traffic grew, you just ran more copies of it.</p>
+
+      <div class="callout callout-info animate-in">
+        <div class="callout-icon">&#128218;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Think of it like a copy shop</strong>
+          <p>Need more output? Just add more identical printers. Every printer does the same job, every page is the same. Simple, predictable, done.</p>
+        </div>
+      </div>
+
+      <p>This worked brilliantly for stateless web apps. But <span class="term" data-definition="Large Language Models (LLMs) are AI systems trained on massive text datasets that can generate, summarize, translate, and reason about text. Examples: GPT, Llama, Qwen.">LLMs</span> broke the model &mdash; because generating a single response actually involves <em>two very different jobs</em>.</p>
+    </div>
+
+    <!-- ── SCREEN 2: Prefill vs Decode ─────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Two Jobs, One Request</h3>
+      <p>When you send a prompt to an LLM, the system does two fundamentally different things:</p>
+
+      <div class="pattern-cards animate-in">
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-1)">
+          <div class="pattern-icon" style="background: var(--color-actor-1)">&#9889;</div>
+          <h4 class="pattern-title">Prefill</h4>
+          <p class="pattern-desc"><strong>Compute-bound.</strong> Reads your entire prompt in one pass and builds internal context. Needs raw GPU horsepower &mdash; like a sprinter doing a 100m dash.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-2)">
+          <div class="pattern-icon" style="background: var(--color-actor-2)">&#128260;</div>
+          <h4 class="pattern-title">Decode</h4>
+          <p class="pattern-desc"><strong>Memory-bound.</strong> Generates tokens one at a time, reading from a <span class="term" data-definition="The KV Cache stores intermediate computations from the prefill phase so the decoder doesn't have to recompute them for every new token. It's essentially the model's short-term memory.">KV Cache</span>. Needs fast memory access &mdash; like a librarian pulling books off shelves.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-accent animate-in">
+        <div class="callout-icon">&#128161;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Key Insight</strong>
+          <p>Because prefill and decode have opposite resource profiles, running them on the same GPU wastes capacity. <span class="term" data-definition="Disaggregated inference separates the prefill and decode phases onto different GPU pools so each can be independently scaled and optimized for its specific workload.">Disaggregated inference</span> puts them on separate GPUs so each can be tuned independently.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 3: Why K8s Alone Breaks ──────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Why Vanilla Kubernetes Falls Short</h3>
+      <p>Standard Kubernetes treats every <span class="term" data-definition="A Pod is the smallest deployable unit in Kubernetes &mdash; a wrapper around one or more containers that share networking and storage. Think of it as one 'instance' of your application.">pod</span> as an independent unit. That assumption breaks with disaggregated inference:</p>
+
+      <div class="step-cards animate-in stagger-children">
+        <div class="step-card animate-in">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Startup Order Matters</strong>
+            <p>The frontend must be ready before workers register. Leaders before followers. K8s has no built-in way to enforce this across pods.</p>
+          </div>
+        </div>
+        <div class="step-card animate-in">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>All-or-Nothing Scheduling</strong>
+            <p>A decode worker without its prefill partner is useless. You need <span class="term" data-definition="Gang scheduling ensures that a group of related pods are all scheduled together or not at all. If any pod in the group can't be placed, none of them start &mdash; preventing half-deployed, broken pipelines.">gang scheduling</span> &mdash; all components land together, or none do.</p>
+          </div>
+        </div>
+        <div class="step-card animate-in">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Topology Awareness</strong>
+            <p>Prefill and decode workers that communicate over <span class="term" data-definition="NVLink is NVIDIA's high-bandwidth interconnect between GPUs, offering 5-10x more bandwidth than PCIe. Essential for fast data transfer between tightly coupled GPU workloads.">NVLink</span> need to be on the same node. Replicas for availability need to be on <em>different</em> nodes. K8s doesn't know about GPU network topology.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 4: Enter Grove + Planner ─────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">The Fix: Grove + Planner</h3>
+      <p>NVIDIA built two components inside <span class="term" data-definition="NVIDIA Dynamo is an open-source framework for building and deploying disaggregated LLM inference pipelines. It handles routing, caching, scaling, and orchestration of multi-component AI serving systems.">Dynamo</span> to solve this:</p>
+
+      <div class="pattern-cards animate-in">
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-5)">
+          <div class="pattern-icon" style="background: var(--color-actor-5)">&#127793;</div>
+          <h4 class="pattern-title">Grove</h4>
+          <p class="pattern-desc">A purpose-built Kubernetes API that deploys entire inference pipelines as a single unit &mdash; with gang scheduling, startup ordering, and topology-aware placement.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-4)">
+          <div class="pattern-icon" style="background: var(--color-actor-4)">&#128202;</div>
+          <h4 class="pattern-title">SLA Planner</h4>
+          <p class="pattern-desc">A real-time autoscaler that watches latency metrics and scales prefill and decode workers independently to meet your <span class="term" data-definition="SLA (Service Level Agreement) targets define the acceptable performance thresholds &mdash; like 'time to first token must be under 50ms' or 'each subsequent token must arrive within 10ms'.">SLA targets</span>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 5: Data Flow Animation ───────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">How a Request Flows Through Disaggregated Inference</h3>
+
+      <div class="flow-animation" data-steps='[
+        {"highlight":"flow-actor-1","label":"A user sends a prompt to the Dynamo Frontend"},
+        {"highlight":"flow-actor-1","label":"Frontend routes the request to an available Prefill worker","packet":true,"from":"actor-1","to":"actor-2"},
+        {"highlight":"flow-actor-2","label":"Prefill processes the entire prompt in one pass (compute-heavy)"},
+        {"highlight":"flow-actor-2","label":"Prefill stores results in the KV Cache and hands off to Decode","packet":true,"from":"actor-2","to":"actor-3"},
+        {"highlight":"flow-actor-3","label":"KV Cache holds the intermediate state between phases"},
+        {"highlight":"flow-actor-3","label":"Decode reads from KV Cache and generates tokens one by one","packet":true,"from":"actor-3","to":"actor-4"},
+        {"highlight":"flow-actor-4","label":"Decode streams tokens back through the Frontend to the user","packet":true,"from":"actor-4","to":"actor-1"},
+        {"highlight":"flow-actor-1","label":"User receives the response token by token in real time"}
+      ]'>
+        <div class="flow-actors">
+          <div class="flow-actor" id="flow-actor-1">
+            <div class="flow-actor-icon" style="background: var(--color-accent-light); border-color: var(--color-accent);">&#127760;</div>
+            <span>Frontend</span>
+          </div>
+          <div class="flow-actor" id="flow-actor-2">
+            <div class="flow-actor-icon" style="background: #FDEEE9; border-color: var(--color-actor-1);">&#9889;</div>
+            <span>Prefill</span>
+          </div>
+          <div class="flow-actor" id="flow-actor-3">
+            <div class="flow-actor-icon" style="background: #E4F2F7; border-color: var(--color-actor-2);">&#128451;</div>
+            <span>KV Cache</span>
+          </div>
+          <div class="flow-actor" id="flow-actor-4">
+            <div class="flow-actor-icon" style="background: #F3EEFA; border-color: var(--color-actor-3);">&#128260;</div>
+            <span>Decode</span>
+          </div>
+        </div>
+
+        <div class="flow-packet"></div>
+        <div class="flow-step-label">Click &ldquo;Next Step&rdquo; to trace a request through the pipeline</div>
+
+        <div class="flow-controls">
+          <button class="btn flow-next-btn">Next Step</button>
+          <button class="btn flow-reset-btn">Restart</button>
+          <span class="flow-progress"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 6: Quiz ──────────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Check Your Understanding</h3>
+
+      <div class="quiz-container" id="quiz-module1">
+        <div class="quiz-question-block"
+             data-correct="option-b"
+             data-explanation-right="Exactly. Prefill crunches your entire prompt at once (compute-heavy), while Decode generates one token at a time from memory (memory-heavy). Different bottlenecks, different GPU needs."
+             data-explanation-wrong="Not quite. Think about what each phase actually does &mdash; one reads the whole prompt, the other generates tokens one by one. They hit different hardware limits.">
+          <h3 class="quiz-question">Why does disaggregated inference separate prefill and decode onto different GPUs?</h3>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="option-a" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Because they use different AI models</span>
+            </button>
+            <button class="quiz-option" data-value="option-b" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Because they have opposite resource profiles &mdash; one is compute-bound, the other is memory-bound</span>
+            </button>
+            <button class="quiz-option" data-value="option-c" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Because Kubernetes requires separate pods for each task</span>
+            </button>
+          </div>
+          <div class="quiz-feedback"></div>
+        </div>
+
+        <div class="quiz-question-block"
+             data-correct="option-c"
+             data-explanation-right="Right. Gang scheduling makes sure the full pipeline lands together. A decode worker without a prefill partner just sits there burning GPU time doing nothing."
+             data-explanation-wrong="Think about what happens if only half the pipeline starts. A decode worker alone can not serve any requests &mdash; it needs prefill to have already processed the prompt.">
+          <h3 class="quiz-question">A new decode worker pod starts, but the prefill worker it depends on failed to schedule. What happens?</h3>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="option-a" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>The decode worker handles both prefill and decode automatically</span>
+            </button>
+            <button class="quiz-option" data-value="option-b" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Kubernetes will retry until both pods are scheduled</span>
+            </button>
+            <button class="quiz-option" data-value="option-c" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>The decode worker is useless alone &mdash; this is exactly why gang scheduling is needed</span>
+            </button>
+          </div>
+          <div class="quiz-feedback"></div>
+        </div>
+
+        <button class="quiz-check-btn" onclick="checkQuiz('quiz-module1')">Check Answers</button>
+        <button class="quiz-reset-btn" onclick="resetQuiz('quiz-module1')">Try Again</button>
+      </div>
+    </div>
+
+  </div>
+</section>

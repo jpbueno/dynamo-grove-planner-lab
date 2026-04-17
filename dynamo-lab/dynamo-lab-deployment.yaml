@@ -11,6 +11,11 @@ spec:
         mainContainer:
           image: 10.100.11.173:5000/dynamo-mocker:1.0.0
           imagePullPolicy: Never
+          env:
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
 
     Planner:
       componentType: planner
@@ -19,6 +24,11 @@ spec:
         mainContainer:
           image: 10.100.11.173:5000/dynamo-mocker:1.0.0
           imagePullPolicy: Never
+          env:
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           command:
             - python3
             - -m
@@ -43,6 +53,11 @@ spec:
           image: 10.100.11.173:5000/dynamo-mocker:1.0.0
           imagePullPolicy: Never
           workingDir: /workspace
+          env:
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           command:
             - python3
             - -m
@@ -67,6 +82,11 @@ spec:
           image: 10.100.11.173:5000/dynamo-mocker:1.0.0
           imagePullPolicy: Never
           workingDir: /workspace
+          env:
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           command:
             - python3
             - -m

@@ -1,0 +1,273 @@
+<section class="module" id="module-5">
+  <div class="module-content">
+
+    <!-- ── HEADER ──────────────────────────────────────────── -->
+    <div class="module-header animate-in">
+      <span class="module-number">05</span>
+      <h2 class="module-title">Seeing It Live</h2>
+      <p class="module-subtitle">Walking through the actual demo &mdash; from YAML manifests to Grafana dashboards, watching Grove and the Planner scale a Qwen model on A100 GPUs in real time.</p>
+    </div>
+
+    <!-- ── SCREEN 1: What's Deployed ───────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">The Demo Setup</h3>
+
+      <div class="callout callout-info animate-in">
+        <div class="callout-icon">&#128187;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Like a fire drill</strong>
+          <p>A fire drill simulates a real emergency in a controlled setting. This demo simulates production traffic hitting a real Dynamo deployment &mdash; same components, same scaling logic, just compressed to 2.5 minutes so you can watch it happen.</p>
+        </div>
+      </div>
+
+      <p>The demo deploys <span class="term" data-definition="Qwen3-0.6B is a relatively small (600M parameter) language model by Alibaba. Chosen for the demo because it loads fast and requires minimal GPU memory, making scale-up/scale-down visible in seconds rather than minutes.">Qwen3-0.6B</span> on <span class="term" data-definition="A100 GPUs are NVIDIA's data center GPUs for AI workloads. The A100-80GB-PCIe variant used in this demo has 80GB of HBM2e memory and is widely deployed in cloud GPU clusters.">A100 GPUs</span> with these components:</p>
+
+      <div class="pattern-cards animate-in">
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-5)">
+          <div class="pattern-icon" style="background: var(--color-actor-5)">&#127760;</div>
+          <h4 class="pattern-title">Frontend</h4>
+          <p class="pattern-desc">Receives requests via OpenAI-compatible <code>/v1/completions</code> endpoint. Exposes Prometheus metrics.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-1)">
+          <div class="pattern-icon" style="background: var(--color-actor-1)">&#9889;</div>
+          <h4 class="pattern-title">Prefill Worker</h4>
+          <p class="pattern-desc">Processes prompts. Runs <span class="term" data-definition="vLLM is an open-source, high-throughput LLM inference engine that uses PagedAttention for efficient KV cache management. Dynamo uses vLLM as one of its supported inference backends.">vLLM</span> with enforce-eager mode for fast model loading in the demo.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-2)">
+          <div class="pattern-icon" style="background: var(--color-actor-2)">&#128260;</div>
+          <h4 class="pattern-title">Decode Worker(s)</h4>
+          <p class="pattern-desc">Generates tokens. Starts at 1, scales to 2 under load, back to 1 when traffic drops.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-4)">
+          <div class="pattern-icon" style="background: var(--color-actor-4)">&#128202;</div>
+          <h4 class="pattern-title">SLA Planner</h4>
+          <p class="pattern-desc">Checks Prometheus every 20s. Targets: TTFT &lt; 50ms, ITL &lt; 10ms. Scales decode when breached.</p>
+        </div>
+      </div>
+
+      <p><span class="term" data-definition="GPU time-slicing lets multiple pods share a single physical GPU by taking turns using it. The demo uses 2 time-slices per GPU so the scaled-up decode worker can share a GPU with the existing one without needing a whole extra physical GPU.">GPU time-slicing</span> (2 replicas per physical GPU) allows the scaled-up decode worker to share a GPU with the existing one.</p>
+    </div>
+
+    <!-- ── SCREEN 2: The Grafana Dashboard ─────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">What the Grafana Dashboard Shows</h3>
+      <p>The demo uses a pre-built <span class="term" data-definition="Grafana is an open-source visualization platform that reads metrics from Prometheus and displays them as interactive dashboards with graphs, gauges, and alerts.">Grafana</span> dashboard with four panels:</p>
+
+      <div class="translation-block animate-in">
+        <div class="translation-code">
+          <span class="translation-label">PROMQL</span>
+          <pre><code><span class="code-line"><span class="code-comment"># TTFT (avg, in ms)</span></span>
+<span class="code-line"><span class="code-function">rate</span>(<span class="code-property">dynamo_frontend_time_to_first_token</span></span>
+<span class="code-line">     <span class="code-property">_seconds_sum</span>{...}[<span class="code-number">1m</span>])</span>
+<span class="code-line">  / <span class="code-function">rate</span>(<span class="code-property">dynamo_frontend_time_to_first_token</span></span>
+<span class="code-line">     <span class="code-property">_seconds_count</span>{...}[<span class="code-number">1m</span>])</span>
+<span class="code-line">  * <span class="code-number">1000</span></span>
+<span class="code-line"></span>
+<span class="code-line"><span class="code-comment"># SLA target line</span></span>
+<span class="code-line"><span class="code-number">50</span></span></code></pre>
+        </div>
+        <div class="translation-english">
+          <span class="translation-label">PLAIN ENGLISH</span>
+          <div class="translation-lines">
+            <p class="tl">Calculate the average Time To First Token:</p>
+            <p class="tl">Take the total TTFT seconds accumulated over the last minute...</p>
+            <p class="tl">...from the Dynamo frontend metrics endpoint.</p>
+            <p class="tl">Divide by the number of requests in the same window...</p>
+            <p class="tl">...to get the average TTFT per request.</p>
+            <p class="tl">Multiply by 1000 to convert seconds to milliseconds.</p>
+            <p class="tl">&nbsp;</p>
+            <p class="tl">Draw a horizontal red dashed line at 50ms &mdash; our SLA target.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>The dashboard also shows ITL (same pattern), request rate, and inflight requests. When the TTFT or ITL line crosses above the red SLA target line, the Planner scales up.</p>
+    </div>
+
+    <!-- ── SCREEN 3: The Two Phases ────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Demo Timeline: Scale Up, Then Scale Down</h3>
+
+      <div class="step-cards animate-in stagger-children">
+        <div class="step-card animate-in" style="border-left-color: var(--color-actor-1);">
+          <div class="step-num" style="background: var(--color-actor-1);">1</div>
+          <div class="step-body">
+            <strong>Heavy Load (90s, 15 req/s)</strong>
+            <p>Load generator fires 15 requests per second. Latency climbs. Within 20s, the Planner detects ITL exceeding 10ms and patches the DGD: <code>VllmDecodeWorker replicas: 1 &rarr; 2</code>.</p>
+          </div>
+        </div>
+        <div class="step-card animate-in" style="border-left-color: var(--color-actor-5);">
+          <div class="step-num" style="background: var(--color-actor-5);">2</div>
+          <div class="step-body">
+            <strong>New Pod Appears</strong>
+            <p>Grove creates the new decode pod. KAI Scheduler places it on the same node via GPU time-slicing. The model loads, pod becomes Running (1/1), and starts serving traffic.</p>
+          </div>
+        </div>
+        <div class="step-card animate-in" style="border-left-color: var(--color-actor-2);">
+          <div class="step-num" style="background: var(--color-actor-2);">3</div>
+          <div class="step-body">
+            <strong>Cool Down (60s, 1 req/s)</strong>
+            <p>Traffic drops to a trickle. The Planner sees low utilization and scales decode back to 1. The extra worker is drained and its GPU is released.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 4: What to Watch For ─────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">The Three Screens to Watch</h3>
+      <p>During the demo, three views run simultaneously in a <span class="term" data-definition="tmux is a terminal multiplexer that lets you split your terminal into multiple panes. In the demo, the top pane shows Planner logs and the bottom pane shows k9s (a Kubernetes pod viewer).">tmux</span> session plus a browser:</p>
+
+      <div class="icon-rows animate-in stagger-children">
+        <div class="icon-row animate-in">
+          <div class="icon-circle" style="background: var(--color-accent-light); color: var(--color-accent);">&#128202;</div>
+          <div>
+            <strong>Grafana (browser)</strong>
+            <p>TTFT and ITL graphs with red SLA target lines. When the line crosses above the target, the Planner will react.</p>
+          </div>
+        </div>
+        <div class="icon-row animate-in">
+          <div class="icon-circle" style="background: #F3EAFA; color: var(--color-actor-3);">&#128220;</div>
+          <div>
+            <strong>Planner Logs (tmux top)</strong>
+            <p>Watch for: <code>Updating decode component VllmDecodeWorker to desired replica count 2</code> &mdash; this is the Planner making its scaling decision.</p>
+          </div>
+        </div>
+        <div class="icon-row animate-in">
+          <div class="icon-circle" style="background: #FDEEE9; color: var(--color-actor-1);">&#128230;</div>
+          <div>
+            <strong>k9s Pods (tmux bottom)</strong>
+            <p>A new decode pod appears as <code>ContainerCreating</code>, transitions to <code>Running (1/1)</code>, and eventually gets terminated during cool-down.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 5: File Map ──────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">The Demo Files</h3>
+
+      <div class="file-tree animate-in">
+        <div class="ft-folder">
+          <div class="ft-name">demos/sla-planner-demo/</div>
+          <div class="ft-children">
+            <div class="ft-file">
+              <div class="ft-name">demo.sh</div>
+              <span class="ft-desc">&mdash; Tunes Planner, launches tmux, runs load generator</span>
+            </div>
+            <div class="ft-file">
+              <div class="ft-name">setup.sh</div>
+              <span class="ft-desc">&mdash; One-time: RBAC, load-gen pod, worker optimization</span>
+            </div>
+            <div class="ft-file">
+              <div class="ft-name">dgdr-sla-planner.yaml</div>
+              <span class="ft-desc">&mdash; The deployment request with profiling config</span>
+            </div>
+            <div class="ft-file">
+              <div class="ft-name">dgd-fixer.yaml</div>
+              <span class="ft-desc">&mdash; Auto-patches profiling DGDs (env vars, RBAC)</span>
+            </div>
+            <div class="ft-file">
+              <div class="ft-name">grafana-dashboard.json</div>
+              <span class="ft-desc">&mdash; Pre-built dashboard: TTFT, ITL, request rate</span>
+            </div>
+            <div class="ft-file">
+              <div class="ft-name">frontend-metrics-servicemonitor.yaml</div>
+              <span class="ft-desc">&mdash; Tells Prometheus to scrape the frontend every 5s</span>
+            </div>
+            <div class="ft-file">
+              <div class="ft-name">cleanup.sh</div>
+              <span class="ft-desc">&mdash; Full teardown of all demo resources</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 6: Final Quiz ────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Final Check</h3>
+
+      <div class="quiz-container" id="quiz-module5">
+        <div class="quiz-question-block"
+             data-correct="option-b"
+             data-explanation-right="Exactly. GPU time-slicing creates virtual GPU slots from a single physical GPU. The new decode worker shares the GPU with the existing one, taking turns on the same hardware."
+             data-explanation-wrong="Think about what enables two pods to use the same physical GPU. The cluster only has 2 physical GPUs, but the demo needs room for an extra decode worker.">
+          <h3 class="quiz-question">The demo cluster has 2 physical A100 GPUs. How does the scaled-up decode worker get GPU access without a third physical GPU?</h3>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="option-a" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>It runs on CPU instead of GPU</span>
+            </button>
+            <button class="quiz-option" data-value="option-b" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>GPU time-slicing splits each physical GPU into 2 virtual slots</span>
+            </button>
+            <button class="quiz-option" data-value="option-c" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>The new worker takes the GPU from the prefill worker</span>
+            </button>
+          </div>
+          <div class="quiz-feedback"></div>
+        </div>
+
+        <div class="quiz-question-block"
+             data-correct="option-a"
+             data-explanation-right="Right. The Planner knows which phase is the bottleneck. ITL exceeding target means decode is saturated. TTFT being fine means prefill has headroom. Scaling only what is needed saves GPUs."
+             data-explanation-wrong="Think about what each metric tells you. TTFT measures prefill speed, ITL measures decode speed. If only one is breaching, the Planner targets that specific phase.">
+          <h3 class="quiz-question">During the heavy load phase, the Planner scales decode from 1 to 2 but leaves prefill at 1. Why?</h3>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="option-a" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Because ITL (decode metric) is breaching the SLA target, but TTFT (prefill metric) is still within bounds</span>
+            </button>
+            <button class="quiz-option" data-value="option-b" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Because the GPU budget only allows one additional worker</span>
+            </button>
+            <button class="quiz-option" data-value="option-c" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Because prefill is faster than decode by default</span>
+            </button>
+          </div>
+          <div class="quiz-feedback"></div>
+        </div>
+
+        <button class="quiz-check-btn" onclick="checkQuiz('quiz-module5')">Check Answers</button>
+        <button class="quiz-reset-btn" onclick="resetQuiz('quiz-module5')">Try Again</button>
+      </div>
+    </div>
+
+    <!-- ── CLOSING ─────────────────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">What You Now Know</h3>
+
+      <div class="callout callout-accent animate-in">
+        <div class="callout-icon">&#127942;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Recap</strong>
+          <p>You&rsquo;ve traced the full journey: from why vanilla Kubernetes breaks for LLM inference, through Grove&rsquo;s building blocks (PodCliques, ScalingGroups, PodCliqueSets), to how the Planner watches metrics and scales workers in real time. You&rsquo;ve seen the actual YAML, the actual scripts, and the actual Grafana queries that make it work.</p>
+        </div>
+      </div>
+
+      <div class="pattern-cards animate-in">
+        <div class="pattern-card" style="border-top: 3px solid var(--color-accent)">
+          <div class="pattern-icon" style="background: var(--color-accent)">&#128279;</div>
+          <h4 class="pattern-title">Grove on GitHub</h4>
+          <p class="pattern-desc">Open source. Docs, tutorials, and office hours available.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-2)">
+          <div class="pattern-icon" style="background: var(--color-actor-2)">&#128214;</div>
+          <h4 class="pattern-title">Dynamo Docs</h4>
+          <p class="pattern-desc">Full documentation for Dynamo, Grove, and the SLA Planner.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-4)">
+          <div class="pattern-icon" style="background: var(--color-actor-4)">&#128172;</div>
+          <h4 class="pattern-title">Office Hours</h4>
+          <p class="pattern-desc">Ask the team directly. Schedule available in the Grove GitHub repo.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>

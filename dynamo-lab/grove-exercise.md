@@ -43,15 +43,15 @@ Each PodClique has labels that encode the topology. Inspect the decode worker's 
 
 ```bash
 kubectl get podclique dynamo-lab-0-decodeworker -n dynamo-lab -o json \
-  | jq '.metadata.labels | {component: ."nvidia.com/dynamo-component", type: ."nvidia.com/dynamo-component-type", subtype: ."nvidia.com/dynamo-sub-component-type", queue: ."kai.scheduler/queue"}'
+  | jq '.metadata.labels | {type: ."nvidia.com/dynamo-component-type", subtype: ."nvidia.com/dynamo-sub-component-type", selector: ."nvidia.com/selector", queue: ."kai.scheduler/queue"}'
 ```
 
 Expected output:
 ```json
 {
-  "component": "DecodeWorker",
   "type": "worker",
   "subtype": "decode",
+  "selector": "dynamo-lab-decodeworker",
   "queue": "dynamo"
 }
 ```
@@ -132,7 +132,7 @@ In a real support scenario, if you find a stuck pod, you can trace upward throug
 
 ```bash
 # Start from a worker pod
-PREFILL_POD=$(kubectl get pod -n dynamo-lab -l nvidia.com/dynamo-component=PrefillWorker -o jsonpath='{.items[0].metadata.name}')
+PREFILL_POD=$(kubectl get pod -n dynamo-lab -l nvidia.com/selector=dynamo-lab-prefillworker -o jsonpath='{.items[0].metadata.name}')
 echo "Pod: $PREFILL_POD"
 
 # The pod's owner is the PodClique

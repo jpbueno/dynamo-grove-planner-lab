@@ -1,0 +1,205 @@
+<section class="module" id="module-4" style="background: var(--color-bg-warm);">
+  <div class="module-content">
+
+    <!-- ── HEADER ──────────────────────────────────────────── -->
+    <div class="module-header animate-in">
+      <span class="module-number">04</span>
+      <h2 class="module-title">The Autopilot</h2>
+      <p class="module-subtitle">How Dynamo&rsquo;s SLA Planner watches latency metrics in real time and scales prefill and decode workers independently to keep your promises.</p>
+    </div>
+
+    <!-- ── SCREEN 1: Why Static Config Breaks ──────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Why &ldquo;Set It and Forget It&rdquo; Doesn&rsquo;t Work</h3>
+
+      <div class="callout callout-info animate-in">
+        <div class="callout-icon">&#127777;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Like a thermostat, not a space heater</strong>
+          <p>A space heater runs at full blast regardless of room temperature. A thermostat <em>measures</em>, <em>predicts</em>, and <em>adjusts</em>. The Planner is a thermostat for your inference latency &mdash; it doesn&rsquo;t just deploy workers, it continuously tunes how many are running.</p>
+        </div>
+      </div>
+
+      <p>LLM traffic is bursty. A chatbot might see 5 requests per second at 3 AM and 500 at noon. Static GPU allocation means you either:</p>
+
+      <div class="pattern-cards animate-in">
+        <div class="pattern-card" style="border-top: 3px solid var(--color-error)">
+          <div class="pattern-icon" style="background: var(--color-error)">&#128176;</div>
+          <h4 class="pattern-title">Over-provision</h4>
+          <p class="pattern-desc">Burn money on idle GPUs at 3 AM just so noon traffic doesn&rsquo;t breach SLA.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-error)">
+          <div class="pattern-icon" style="background: var(--color-error)">&#128680;</div>
+          <h4 class="pattern-title">Under-provision</h4>
+          <p class="pattern-desc">Save money but breach latency targets when traffic spikes. Users see slow responses.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-accent)">
+          <div class="pattern-icon" style="background: var(--color-accent)">&#9989;</div>
+          <h4 class="pattern-title">Auto-scale</h4>
+          <p class="pattern-desc">Let the Planner decide in real time. Alibaba ACK saw <strong>80% fewer TTFT breaches</strong> with <strong>5% fewer GPUs</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 2: Two Phases ────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Offline Profiling + Online Scaling</h3>
+      <p>The Planner works in two phases:</p>
+
+      <div class="icon-rows animate-in stagger-children">
+        <div class="icon-row animate-in">
+          <div class="icon-circle" style="background: var(--color-info-light); color: var(--color-info);">&#128269;</div>
+          <div>
+            <strong>Phase 1: Offline Profiling</strong>
+            <p>Before serving traffic, the Planner benchmarks the model on your hardware. It learns: &ldquo;On an A100, this model can handle X requests per second at Y <span class="term" data-definition="TTFT (Time To First Token) measures how long a user waits from sending their prompt until the first token of the response appears. A key SLA metric for perceived responsiveness.">TTFT</span> and Z <span class="term" data-definition="ITL (Inter-Token Latency) measures the delay between consecutive tokens in the response stream. Low ITL means the response feels fluid; high ITL feels choppy and laggy.">ITL</span>.&rdquo; This creates an <span class="term" data-definition="An interpolation model maps request rates to expected latency. Given 'N requests per second,' it predicts what TTFT and ITL will be. The Planner uses this to decide when scaling is needed before SLAs are breached.">interpolation model</span> &mdash; a lookup table of load-to-latency curves.</p>
+          </div>
+        </div>
+        <div class="icon-row animate-in">
+          <div class="icon-circle" style="background: var(--color-accent-light); color: var(--color-accent);">&#9889;</div>
+          <div>
+            <strong>Phase 2: Online Scaling</strong>
+            <p>Once live, the Planner collects real metrics from <span class="term" data-definition="Prometheus is an open-source monitoring system that scrapes metrics from your services at regular intervals. The SLA Planner queries Prometheus for TTFT, ITL, and request rate data to make scaling decisions.">Prometheus</span> every N seconds. It predicts future load using <span class="term" data-definition="ARIMA (AutoRegressive Integrated Moving Average) is a statistical forecasting model that predicts future values based on past patterns. The Planner uses it to anticipate traffic spikes before they cause latency breaches.">ARIMA</span> or Prophet models, then checks: &ldquo;At the predicted load, how many decode/prefill workers do I need to stay within SLA?&rdquo;</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 3: Data Flow Animation ───────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">The Planner Decision Loop</h3>
+      <p>Every adjustment interval, the Planner runs this cycle:</p>
+
+      <div class="flow-animation" data-steps='[
+        {"highlight":"flow-actor-1","label":"Prometheus scrapes TTFT and ITL metrics from the Dynamo Frontend every 5 seconds"},
+        {"highlight":"flow-actor-1","label":"Planner queries Prometheus for the latest metrics","packet":true,"from":"actor-1","to":"actor-2"},
+        {"highlight":"flow-actor-2","label":"The Load Predictor (ARIMA) forecasts traffic for the next interval"},
+        {"highlight":"flow-actor-2","label":"Interpolator checks: at predicted load, how many workers keep us within SLA?","packet":true,"from":"actor-2","to":"actor-3"},
+        {"highlight":"flow-actor-3","label":"Scaling Logic compares current replicas vs. needed replicas"},
+        {"highlight":"flow-actor-3","label":"Decision: scale decode from 1 to 2 workers. Patch the DGD.","packet":true,"from":"actor-3","to":"actor-4"},
+        {"highlight":"flow-actor-4","label":"Grove receives the updated DGD and schedules a new decode pod"},
+        {"highlight":"flow-actor-4","label":"KAI Scheduler places the new pod on an available GPU. Pipeline capacity increases."}
+      ]'>
+        <div class="flow-actors">
+          <div class="flow-actor" id="flow-actor-1">
+            <div class="flow-actor-icon" style="background: #FDEEE9; border-color: var(--color-actor-1);">&#128202;</div>
+            <span>Prometheus</span>
+          </div>
+          <div class="flow-actor" id="flow-actor-2">
+            <div class="flow-actor-icon" style="background: #F3EEFA; border-color: var(--color-actor-3);">&#129504;</div>
+            <span>Load Predictor</span>
+          </div>
+          <div class="flow-actor" id="flow-actor-3">
+            <div class="flow-actor-icon" style="background: #FDF5E0; border-color: var(--color-actor-4);">&#9878;</div>
+            <span>Scaling Logic</span>
+          </div>
+          <div class="flow-actor" id="flow-actor-4">
+            <div class="flow-actor-icon" style="background: var(--color-accent-light); border-color: var(--color-accent);">&#127793;</div>
+            <span>Grove</span>
+          </div>
+        </div>
+
+        <div class="flow-packet"></div>
+        <div class="flow-step-label">Click &ldquo;Next Step&rdquo; to follow one Planner decision cycle</div>
+
+        <div class="flow-controls">
+          <button class="btn flow-next-btn">Next Step</button>
+          <button class="btn flow-reset-btn">Restart</button>
+          <span class="flow-progress"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 4: Code Translation ──────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Tuning the Planner for a Demo</h3>
+      <p>The demo script overrides default Planner settings for faster feedback loops:</p>
+
+      <div class="translation-block animate-in">
+        <div class="translation-code">
+          <span class="translation-label">BASH</span>
+          <pre><code><span class="code-line"><span class="code-property">OVERRIDES</span>=<span class="code-string">'{</span></span>
+<span class="code-line"><span class="code-string">  "adjustment-interval":"20",</span></span>
+<span class="code-line"><span class="code-string">  "itl":"10",</span></span>
+<span class="code-line"><span class="code-string">  "ttft":"50",</span></span>
+<span class="code-line"><span class="code-string">  "max-gpu-budget":"3",</span></span>
+<span class="code-line"><span class="code-string">  "load-predictor":"constant"</span></span>
+<span class="code-line"><span class="code-string">}'</span></span></code></pre>
+        </div>
+        <div class="translation-english">
+          <span class="translation-label">PLAIN ENGLISH</span>
+          <div class="translation-lines">
+            <p class="tl">Override the Planner defaults with demo-friendly values:</p>
+            <p class="tl">Check metrics every 20 seconds (default is 180s &mdash; too slow for a live demo).</p>
+            <p class="tl">Target ITL of 10ms per token (aggressively tight for demo visibility).</p>
+            <p class="tl">Target TTFT of 50ms (also tight &mdash; makes the Planner react quickly).</p>
+            <p class="tl">Allow up to 3 GPUs total (budget cap to prevent runaway scaling).</p>
+            <p class="tl">Use &ldquo;constant&rdquo; predictor instead of ARIMA (assumes current load continues, simpler for demo).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout-accent animate-in">
+        <div class="callout-icon">&#128161;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Key Insight</strong>
+          <p>In production, you would use ARIMA or Prophet for prediction and a 180-second interval. The tight demo values make the Planner react in seconds instead of minutes so you can see scaling happen live.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 5: Quiz ──────────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Check Your Understanding</h3>
+
+      <div class="quiz-container" id="quiz-module4">
+        <div class="quiz-question-block"
+             data-correct="option-c"
+             data-explanation-right="Exactly. The Planner knows prefill and decode have different bottlenecks. If decode is the problem, only decode needs more workers. Scaling prefill would waste GPUs."
+             data-explanation-wrong="Think about which phase is the bottleneck. If TTFT is fine but ITL is high, the problem is in the decode phase, not prefill.">
+          <h3 class="quiz-question">Traffic spikes and ITL exceeds the SLA target, but TTFT is still fine. What does the Planner do?</h3>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="option-a" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Scales up both prefill and decode equally</span>
+            </button>
+            <button class="quiz-option" data-value="option-b" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Scales up prefill workers since they feed the decode phase</span>
+            </button>
+            <button class="quiz-option" data-value="option-c" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Scales up only decode workers, since ITL is the decode bottleneck</span>
+            </button>
+          </div>
+          <div class="quiz-feedback"></div>
+        </div>
+
+        <div class="quiz-question-block"
+             data-correct="option-b"
+             data-explanation-right="Right. Offline profiling gives the Planner a map of 'at this load, expect this latency.' Without it, the Planner would be flying blind &mdash; reacting to breaches instead of predicting them."
+             data-explanation-wrong="Think about what the Planner needs to make a decision before latency actually exceeds the target. It needs to know the relationship between load and latency for your specific hardware.">
+          <h3 class="quiz-question">Why does the Planner need an offline profiling phase before it can auto-scale?</h3>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="option-a" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>To warm up the GPU caches before serving traffic</span>
+            </button>
+            <button class="quiz-option" data-value="option-b" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>To learn the load-to-latency curve for this model on this hardware, so it can predict when scaling is needed</span>
+            </button>
+            <button class="quiz-option" data-value="option-c" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>To download the model weights from HuggingFace</span>
+            </button>
+          </div>
+          <div class="quiz-feedback"></div>
+        </div>
+
+        <button class="quiz-check-btn" onclick="checkQuiz('quiz-module4')">Check Answers</button>
+        <button class="quiz-reset-btn" onclick="resetQuiz('quiz-module4')">Try Again</button>
+      </div>
+    </div>
+
+  </div>
+</section>

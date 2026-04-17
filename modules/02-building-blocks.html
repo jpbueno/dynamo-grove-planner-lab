@@ -1,0 +1,194 @@
+<section class="module" id="module-2" style="background: var(--color-bg-warm);">
+  <div class="module-content">
+
+    <!-- ── HEADER ──────────────────────────────────────────── -->
+    <div class="module-header animate-in">
+      <span class="module-number">02</span>
+      <h2 class="module-title">Meet the Building Blocks</h2>
+      <p class="module-subtitle">Grove introduces three nested abstractions that let you describe an entire inference pipeline in one place. Think of them as nesting dolls for GPU workloads.</p>
+    </div>
+
+    <!-- ── SCREEN 1: PodCliques ────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">PodClique: A Team of Identical Workers</h3>
+
+      <div class="callout callout-info animate-in">
+        <div class="callout-icon">&#127917;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Like players on a sports team</strong>
+          <p>A basketball team has five starters, but if one gets injured, a substitute steps in. A PodClique works the same way &mdash; a group of identical pods filling the same role, with a minimum number that must always be available.</p>
+        </div>
+      </div>
+
+      <p>A <span class="term" data-definition="A PodClique is a Grove abstraction representing a group of pods that share the same template and role &mdash; like 'all decode workers' or 'all prefill workers'. Each PodClique can scale independently.">PodClique</span> is a group of pods with the same role. All decode workers form one PodClique. All prefill workers form another. The frontend is its own PodClique.</p>
+
+      <p>Each PodClique has two key numbers:</p>
+
+      <div class="pattern-cards animate-in">
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-5)">
+          <div class="pattern-icon" style="background: var(--color-actor-5)">&#128200;</div>
+          <h4 class="pattern-title">replicas</h4>
+          <p class="pattern-desc">Total desired pods. &ldquo;I want 3 decode workers running.&rdquo;</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-1)">
+          <div class="pattern-icon" style="background: var(--color-actor-1)">&#128737;</div>
+          <h4 class="pattern-title">minAvailable</h4>
+          <p class="pattern-desc">Minimum pods that must be running for the pipeline to function. &ldquo;At least 1 decode worker must always be up.&rdquo;</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 2: ScalingGroups ─────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">ScalingGroup: Teams That Move Together</h3>
+
+      <p>Sometimes PodCliques need to scale as one unit. A prefill leader and its workers are useless without each other, so they belong in the same <span class="term" data-definition="A PodCliqueScalingGroup bundles tightly coupled PodCliques so they scale together. When one scales up, the others in the group do too &mdash; ensuring dependent components stay in sync.">ScalingGroup</span>.</p>
+
+      <div class="callout callout-info animate-in">
+        <div class="callout-icon">&#128642;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Like carriages on a train</strong>
+          <p>You can add more carriages to a train, but a locomotive and its dining car always move together. ScalingGroups bind dependent PodCliques so they expand and contract as one.</p>
+        </div>
+      </div>
+
+      <div class="flow-steps animate-in">
+        <div class="flow-step">
+          <div class="flow-step-num" style="background: var(--color-actor-1)">P</div>
+          <p>Prefill ScalingGroup (replicas=1)</p>
+        </div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background: var(--color-actor-2)">D</div>
+          <p>Decode ScalingGroup (replicas=2)</p>
+        </div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background: var(--color-actor-5)">F</div>
+          <p>Frontend ScalingGroup (replicas=1)</p>
+        </div>
+      </div>
+
+      <p>The Planner can scale decode independently of prefill. Each ScalingGroup follows its own scaling rules.</p>
+    </div>
+
+    <!-- ── SCREEN 3: PodCliqueSet ──────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">PodCliqueSet: The Whole Orchestra</h3>
+
+      <p>The <span class="term" data-definition="PodCliqueSet is the top-level Grove API object. It describes an entire inference workload &mdash; all PodCliques, ScalingGroups, startup order, gang-scheduling constraints, and topology preferences &mdash; in a single Kubernetes Custom Resource.">PodCliqueSet</span> is the top-level object. It wraps all your ScalingGroups and PodCliques into one <span class="term" data-definition="A CRD (Custom Resource Definition) extends Kubernetes with new object types. Grove defines its own CRDs so you can describe AI inference workloads using kubectl, just like you would a Deployment or Service.">CRD</span> that you apply with <code>kubectl</code>.</p>
+
+      <!-- Interactive Architecture Diagram -->
+      <div class="arch-diagram animate-in">
+        <div class="arch-zone" style="border-color: var(--color-accent)">
+          <h4 class="arch-zone-label">PodCliqueSet (replicas=2)</h4>
+          <div class="arch-zone" style="border-color: var(--color-actor-5)">
+            <h4 class="arch-zone-label">Replica 0 &mdash; packed for performance</h4>
+            <div class="arch-component" data-desc="Frontend PodClique: receives user requests, routes to prefill workers, streams decode tokens back to users.">
+              <div class="arch-icon">&#127760;</div>
+              <span>Frontend</span>
+            </div>
+            <div class="arch-component" data-desc="Prefill ScalingGroup: processes the full prompt in one compute-heavy pass. Scales independently based on TTFT targets.">
+              <div class="arch-icon">&#9889;</div>
+              <span>Prefill (SG1)</span>
+            </div>
+            <div class="arch-component" data-desc="Decode ScalingGroup: generates tokens one at a time from the KV Cache. Memory-bound. Scales based on ITL targets.">
+              <div class="arch-icon">&#128260;</div>
+              <span>Decode (SG2)</span>
+            </div>
+          </div>
+          <div class="arch-zone" style="border-color: var(--color-actor-2)">
+            <h4 class="arch-zone-label">Replica 1 &mdash; spread for availability</h4>
+            <div class="arch-component" data-desc="Second replica of the full pipeline on a different node. If Replica 0's node goes down, Replica 1 keeps serving.">
+              <div class="arch-icon">&#127760;</div>
+              <span>Frontend</span>
+            </div>
+            <div class="arch-component" data-desc="Identical prefill capacity on a separate node for high availability.">
+              <div class="arch-icon">&#9889;</div>
+              <span>Prefill (SG1)</span>
+            </div>
+            <div class="arch-component" data-desc="Identical decode capacity on a separate node for high availability.">
+              <div class="arch-icon">&#128260;</div>
+              <span>Decode (SG2)</span>
+            </div>
+          </div>
+        </div>
+        <div class="arch-description">Click any component to learn what it does</div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 4: Code Translation ──────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">What This Looks Like in YAML</h3>
+      <p>Here is a real <span class="term" data-definition="A DynamoGraphDeploymentRequest (DGDR) is the manifest you submit to tell Dynamo what model to serve, on what hardware, and with what SLA targets. Dynamo and Grove handle the rest.">DGDR</span> manifest that deploys a model with SLA Planner support:</p>
+
+      <div class="translation-block animate-in">
+        <div class="translation-code">
+          <span class="translation-label">YAML</span>
+          <pre><code><span class="code-line"><span class="code-keyword">apiVersion</span>: <span class="code-string">nvidia.com/v1alpha1</span></span>
+<span class="code-line"><span class="code-keyword">kind</span>: <span class="code-string">DynamoGraphDeploymentRequest</span></span>
+<span class="code-line"><span class="code-keyword">metadata</span>:</span>
+<span class="code-line">  <span class="code-property">name</span>: <span class="code-string">sla-planner-demo</span></span>
+<span class="code-line"><span class="code-keyword">spec</span>:</span>
+<span class="code-line">  <span class="code-property">model</span>: <span class="code-string">nvidia/Llama-3.1-Nemotron-Nano-8B-v1</span></span>
+<span class="code-line">  <span class="code-property">backend</span>: <span class="code-string">vllm</span></span>
+<span class="code-line">  <span class="code-keyword">profilingConfig</span>:</span>
+<span class="code-line">    <span class="code-property">config</span>:</span>
+<span class="code-line">      <span class="code-keyword">sla</span>:</span>
+<span class="code-line">        <span class="code-property">ttft</span>: <span class="code-number">1000.0</span></span>
+<span class="code-line">        <span class="code-property">itl</span>: <span class="code-number">100.0</span></span></code></pre>
+        </div>
+        <div class="translation-english">
+          <span class="translation-label">PLAIN ENGLISH</span>
+          <div class="translation-lines">
+            <p class="tl">Use NVIDIA's custom Kubernetes API (version v1alpha1).</p>
+            <p class="tl">This is a deployment request &mdash; a wish list for what you want running.</p>
+            <p class="tl">Give it a name so we can reference it later.</p>
+            <p class="tl">Call this deployment "sla-planner-demo".</p>
+            <p class="tl">Now describe what we actually want.</p>
+            <p class="tl">Serve this specific model from HuggingFace/NVIDIA.</p>
+            <p class="tl">Use vLLM as the inference engine behind the scenes.</p>
+            <p class="tl">Before deploying, profile the model to learn its performance characteristics.</p>
+            <p class="tl">Configure what "good enough" latency looks like:</p>
+            <p class="tl">SLA section &mdash; the latency promises we want to keep:</p>
+            <p class="tl">First token must arrive within 1000ms (1 second).</p>
+            <p class="tl">Each subsequent token must arrive within 100ms.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 5: Drag-and-Drop Quiz ────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Match the Building Block</h3>
+      <p>Drag each Grove concept to its correct description.</p>
+
+      <div class="dnd-container" id="dnd-module2">
+        <div class="dnd-chips">
+          <div class="dnd-chip" draggable="true" data-answer="podclique">PodClique</div>
+          <div class="dnd-chip" draggable="true" data-answer="scalinggroup">ScalingGroup</div>
+          <div class="dnd-chip" draggable="true" data-answer="podcliqueset">PodCliqueSet</div>
+        </div>
+        <div class="dnd-zones">
+          <div class="dnd-zone" data-correct="podclique">
+            <p class="dnd-zone-label">A group of identical pods filling the same role (e.g., all decode workers)</p>
+            <div class="dnd-zone-target">Drop here</div>
+          </div>
+          <div class="dnd-zone" data-correct="scalinggroup">
+            <p class="dnd-zone-label">Bundles dependent PodCliques so they scale up and down together</p>
+            <div class="dnd-zone-target">Drop here</div>
+          </div>
+          <div class="dnd-zone" data-correct="podcliqueset">
+            <p class="dnd-zone-label">The top-level CRD that describes the entire inference workload</p>
+            <div class="dnd-zone-target">Drop here</div>
+          </div>
+        </div>
+        <div style="margin-top: var(--space-4); display: flex; gap: var(--space-3);">
+          <button class="btn btn-primary" onclick="checkDnD('dnd-module2')">Check Matches</button>
+          <button class="btn" onclick="resetDnD('dnd-module2')">Reset</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>

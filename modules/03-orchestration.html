@@ -1,0 +1,239 @@
+<section class="module" id="module-3">
+  <div class="module-content">
+
+    <!-- ── HEADER ──────────────────────────────────────────── -->
+    <div class="module-header animate-in">
+      <span class="module-number">03</span>
+      <h2 class="module-title">The Orchestra Conductor</h2>
+      <p class="module-subtitle">How Grove turns a YAML spec into running, topology-optimized pods &mdash; with every component in the right place, starting in the right order.</p>
+    </div>
+
+    <!-- ── SCREEN 1: The Workflow ──────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">From Spec to Running Pods</h3>
+
+      <div class="callout callout-info animate-in">
+        <div class="callout-icon">&#127932;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Like a film director reading a screenplay</strong>
+          <p>You hand the director a script (your PodCliqueSet YAML). The director doesn&rsquo;t just hire actors &mdash; they decide where each scene is shot, which actors need to be on set together, and the exact order scenes are filmed. Grove is that director for your GPU cluster.</p>
+        </div>
+      </div>
+
+      <p>When you <code>kubectl apply</code> a <span class="term" data-definition="The Grove Operator is a Kubernetes controller that watches for PodCliqueSet resources and translates them into lower-level Kubernetes objects (pods, services, secrets, HPA). It continuously reconciles desired vs. actual state.">Grove Operator</span> picks up your PodCliqueSet and creates everything the pipeline needs:</p>
+
+      <div class="step-cards animate-in stagger-children">
+        <div class="step-card animate-in">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Parse the Spec</strong>
+            <p>Grove reads your PodCliqueSet and identifies all PodCliques, ScalingGroups, and their dependencies.</p>
+          </div>
+        </div>
+        <div class="step-card animate-in">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Create K8s Resources</strong>
+            <p>Services, Secrets, <span class="term" data-definition="HPA (Horizontal Pod Autoscaler) is a built-in Kubernetes feature that automatically adjusts the number of pod replicas based on observed metrics. Grove integrates with HPA for component-level scaling.">HPAs</span>, and pod templates are generated for each component.</p>
+          </div>
+        </div>
+        <div class="step-card animate-in">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Generate PodGangs</strong>
+            <p><span class="term" data-definition="A PodGang is a Grove-generated scheduling constraint that tells the AI scheduler which pods must be scheduled together as a group. If any pod in the gang can't be placed, the whole gang waits.">PodGangs</span> define which pods must land together. The scheduler sees these as atomic units.</p>
+          </div>
+        </div>
+        <div class="step-card animate-in">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Schedule with Topology</strong>
+            <p>The <span class="term" data-definition="KAI Scheduler is an advanced AI-aware Kubernetes scheduler (from NVIDIA's RunAI acquisition) that understands GPU topology, NVLink connections, and network fabric to place pods optimally for performance.">KAI Scheduler</span> uses PodGangs to gang-schedule pods with GPU topology awareness.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 2: Group Chat ────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Behind the Scenes: A Deployment Conversation</h3>
+      <p>Watch how the components talk to each other during deployment:</p>
+
+      <div class="chat-window" id="chat-module3">
+        <div class="chat-messages">
+          <div class="chat-message" data-msg="0" data-sender="user" style="display:none">
+            <div class="chat-avatar" style="background: var(--color-actor-4)">U</div>
+            <div class="chat-bubble">
+              <span class="chat-sender" style="color: var(--color-actor-4)">Engineer</span>
+              <p>kubectl apply -f dgdr-sla-planner.yaml</p>
+            </div>
+          </div>
+          <div class="chat-message" data-msg="1" data-sender="grove" style="display:none">
+            <div class="chat-avatar" style="background: var(--color-actor-5)">G</div>
+            <div class="chat-bubble">
+              <span class="chat-sender" style="color: var(--color-actor-5)">Grove Operator</span>
+              <p>Got it. I see a Frontend, Prefill, Decode, and Planner. Creating services and secrets now...</p>
+            </div>
+          </div>
+          <div class="chat-message" data-msg="2" data-sender="grove" style="display:none">
+            <div class="chat-avatar" style="background: var(--color-actor-5)">G</div>
+            <div class="chat-bubble">
+              <span class="chat-sender" style="color: var(--color-actor-5)">Grove Operator</span>
+              <p>PodGang created: Frontend + Prefill + Decode must all land or none do. Sending to scheduler.</p>
+            </div>
+          </div>
+          <div class="chat-message" data-msg="3" data-sender="scheduler" style="display:none">
+            <div class="chat-avatar" style="background: var(--color-actor-2)">K</div>
+            <div class="chat-bubble">
+              <span class="chat-sender" style="color: var(--color-actor-2)">KAI Scheduler</span>
+              <p>Checking GPU topology... Node A has 2 A100s on the same NVLink domain. Placing prefill and decode there for maximum bandwidth.</p>
+            </div>
+          </div>
+          <div class="chat-message" data-msg="4" data-sender="scheduler" style="display:none">
+            <div class="chat-avatar" style="background: var(--color-actor-2)">K</div>
+            <div class="chat-bubble">
+              <span class="chat-sender" style="color: var(--color-actor-2)">KAI Scheduler</span>
+              <p>All pods in the gang are placed. Starting in order: Frontend first, then Prefill, then Decode.</p>
+            </div>
+          </div>
+          <div class="chat-message" data-msg="5" data-sender="grove" style="display:none">
+            <div class="chat-avatar" style="background: var(--color-actor-5)">G</div>
+            <div class="chat-bubble">
+              <span class="chat-sender" style="color: var(--color-actor-5)">Grove Operator</span>
+              <p>All components Running (1/1). Pipeline is live and ready for traffic.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-typing" style="display:none">
+          <div class="chat-avatar" id="chat-module3-typing-avatar">?</div>
+          <div class="chat-typing-dots">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </div>
+        </div>
+
+        <div class="chat-controls">
+          <button class="btn chat-next-btn">Next Message</button>
+          <button class="btn chat-all-btn">Play All</button>
+          <button class="btn chat-reset-btn">Replay</button>
+          <span class="chat-progress"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 3: Topology ──────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Packed for Speed, Spread for Safety</h3>
+      <p>Grove gives the scheduler two opposing topology goals &mdash; and the scheduler balances both:</p>
+
+      <div class="pattern-cards animate-in">
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-5)">
+          <div class="pattern-icon" style="background: var(--color-actor-5)">&#128230;</div>
+          <h4 class="pattern-title">Network Packed</h4>
+          <p class="pattern-desc"><strong>Within a replica:</strong> pods that talk to each other frequently are placed on the same node or NVLink domain. Minimizes latency between prefill and decode.</p>
+        </div>
+        <div class="pattern-card" style="border-top: 3px solid var(--color-actor-2)">
+          <div class="pattern-icon" style="background: var(--color-actor-2)">&#128268;</div>
+          <h4 class="pattern-title">Network Spread</h4>
+          <p class="pattern-desc"><strong>Across replicas:</strong> full copies of the pipeline are spread across different nodes or failure domains. If one node dies, the other replica keeps serving.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-accent animate-in">
+        <div class="callout-icon">&#128161;</div>
+        <div class="callout-content">
+          <strong class="callout-title">Key Insight</strong>
+          <p>This packed/spread duality is a universal infrastructure pattern. Databases do it (replicas on different availability zones). CDNs do it (edge servers spread globally). Grove brings it to GPU workloads.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 4: Code Translation ──────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">What Grove Creates Under the Hood</h3>
+      <p>When the DGDR profiling completes, Grove generates a <span class="term" data-definition="A DynamoGraphDeployment (DGD) is the actual running deployment that Grove manages. It is created either manually or automatically after a DGDR finishes profiling. The DGD contains the full spec for every component in the pipeline.">DGD</span>. The setup script patches it for the demo environment:</p>
+
+      <div class="translation-block animate-in">
+        <div class="translation-code">
+          <span class="translation-label">BASH</span>
+          <pre><code><span class="code-line"><span class="code-comment"># Patch RBAC so Planner can scale DGDs</span></span>
+<span class="code-line"><span class="code-function">kubectl</span> patch role <span class="code-string">"$ROLE"</span> \</span>
+<span class="code-line">  -n <span class="code-string">"$NAMESPACE"</span> --type=json -p <span class="code-string">'[</span></span>
+<span class="code-line"><span class="code-string">  {"op":"add","path":"/rules/-",</span></span>
+<span class="code-line"><span class="code-string">   "value":{"apiGroups":["nvidia.com"],</span></span>
+<span class="code-line"><span class="code-string">    "resources":["dynamographdeployments"],</span></span>
+<span class="code-line"><span class="code-string">    "verbs":["get","patch","update"]}}]'</span></span></code></pre>
+        </div>
+        <div class="translation-english">
+          <span class="translation-label">PLAIN ENGLISH</span>
+          <div class="translation-lines">
+            <p class="tl">We need to give the Planner permission to modify deployments.</p>
+            <p class="tl">Update the Kubernetes role (permission set) for this namespace...</p>
+            <p class="tl">...targeting the sla-planner-demo namespace specifically.</p>
+            <p class="tl">Add a new permission rule to the existing list:</p>
+            <p class="tl">This rule applies to NVIDIA's custom API group.</p>
+            <p class="tl">Specifically for DynamoGraphDeployment resources.</p>
+            <p class="tl">Allow reading, patching, and updating &mdash; so the Planner can scale workers up and down.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 5: Quiz ──────────────────────────────────── -->
+    <div class="screen animate-in">
+      <h3 class="screen-heading">Check Your Understanding</h3>
+
+      <div class="quiz-container" id="quiz-module3">
+        <div class="quiz-question-block"
+             data-correct="option-b"
+             data-explanation-right="Exactly. PodGangs are the mechanism that makes gang scheduling work &mdash; they tell the scheduler which pods are a package deal."
+             data-explanation-wrong="Not quite. Think about what prevents a half-deployed pipeline. The scheduler needs to know which pods are inseparable.">
+          <h3 class="quiz-question">Your decode workers are scheduled, but the prefill workers are stuck Pending. What Grove mechanism should have prevented this?</h3>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="option-a" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>ScalingGroups &mdash; they should scale together</span>
+            </button>
+            <button class="quiz-option" data-value="option-b" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>PodGangs &mdash; they should be scheduled as an atomic group</span>
+            </button>
+            <button class="quiz-option" data-value="option-c" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>PodCliques &mdash; they should have the same template</span>
+            </button>
+          </div>
+          <div class="quiz-feedback"></div>
+        </div>
+
+        <div class="quiz-question-block"
+             data-correct="option-a"
+             data-explanation-right="Right. Within a replica, pods are packed close together for fast communication. Across replicas, they are spread apart for fault tolerance."
+             data-explanation-wrong="Think about the two topology goals &mdash; performance within a group vs. availability across groups.">
+          <h3 class="quiz-question">You have a PodCliqueSet with replicas=2. Where does the KAI Scheduler place the pods?</h3>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="option-a" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Each replica is packed on one node for speed; the two replicas are spread across different nodes for availability</span>
+            </button>
+            <button class="quiz-option" data-value="option-b" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>All pods from both replicas are placed on the same node to minimize latency</span>
+            </button>
+            <button class="quiz-option" data-value="option-c" onclick="selectOption(this)">
+              <div class="quiz-option-radio"></div>
+              <span>Pods are distributed randomly across all available nodes</span>
+            </button>
+          </div>
+          <div class="quiz-feedback"></div>
+        </div>
+
+        <button class="quiz-check-btn" onclick="checkQuiz('quiz-module3')">Check Answers</button>
+        <button class="quiz-reset-btn" onclick="resetQuiz('quiz-module3')">Try Again</button>
+      </div>
+    </div>
+
+  </div>
+</section>

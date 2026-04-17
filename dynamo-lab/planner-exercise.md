@@ -145,12 +145,12 @@ PROM_IP=$(kubectl get svc -n monitoring prometheus-kube-prometheus-prometheus \
   -o jsonpath='{.spec.clusterIP}')
 
 # Average TTFT over last 30s (same query the Planner uses)
-curl -s "http://$PROM_IP:80/api/v1/query" \
+curl -s "http://$PROM_IP:9090/api/v1/query" \
   --data-urlencode 'query=increase(dynamo_frontend_time_to_first_token_seconds_sum[30s])/increase(dynamo_frontend_time_to_first_token_seconds_count[30s])' \
   | jq '.data.result[0].value[1]'
 
 # Request count in last 30s
-curl -s "http://$PROM_IP:80/api/v1/query" \
+curl -s "http://$PROM_IP:9090/api/v1/query" \
   --data-urlencode 'query=increase(dynamo_frontend_requests_total[30s])' \
   | jq '.data.result[0].value[1]'
 ```
