@@ -34,6 +34,13 @@ fi
 # Run the full setup script as root
 sudo NGC_API_KEY="$NGC_API_KEY" bash ~/dynamo-grove-planner-lab/dynamo-lab/setup-node.sh
 
+# Configure kubectl autocomplete and alias for the current user
+if ! grep -q "alias k=kubectl" ~/.bashrc 2>/dev/null; then
+  echo 'source <(kubectl completion bash)' >> ~/.bashrc
+  echo 'alias k=kubectl' >> ~/.bashrc
+  echo 'complete -o default -F __start_kubectl k' >> ~/.bashrc
+fi
+
 echo ""
 echo "========================================="
 echo "  Setup complete! Run the exercises:"
