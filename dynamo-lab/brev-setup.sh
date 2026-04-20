@@ -44,6 +44,5 @@ fi
 echo ""
 echo "========================================="
 echo "  Setup complete! Run the exercises:"
-echo "    cat ~/dynamo-lab/grove-exercise.md"
-echo "    cat ~/dynamo-lab/planner-exercise.md"
+echo "    cat ~/dynamo-lab/lab-exercises.md"
 echo "========================================="

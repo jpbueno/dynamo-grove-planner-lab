@@ -89,8 +89,7 @@ If all four pass, you are ready for the exercises.
 ## Lab Exercises
 
 ```bash
-cat ~/dynamo-lab/grove-exercise.md      # Exercise 1: How the operator manages the pipeline
-cat ~/dynamo-lab/planner-exercise.md    # Exercise 2: SLA-driven autoscaling
+cat ~/dynamo-lab/lab-exercises.md       # Grove & Planner exercises
 ```
 
 ---

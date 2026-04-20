@@ -1,6 +1,6 @@
-# Lab Exercise: Grove — Exploring Topology & Gang Scheduling with AI
+# Dynamo Grove & Planner Hands On Lab
 
-**Duration:** ~10 minutes  
+**Duration:** ~15 minutes  
 **Namespace:** `dynamo-lab`  
 **Tools:** Claude Code (CLI) or Cursor
 
@@ -28,11 +28,13 @@ This opens a remote Cursor window connected to your lab instance, where kubectl 
 
 ## How this lab works
 
-Instead of copying and pasting kubectl commands, you'll explore Grove by asking questions in natural language. Use Claude Code in your terminal or Cursor's AI chat — the AI has full access to your cluster via kubectl.
+Instead of copying and pasting kubectl commands, you'll explore Grove and the Planner by asking questions in natural language. Use Claude Code in your terminal or Cursor's AI chat — the AI has full access to your cluster via kubectl.
 
 > **Tip:** You don't need to type the prompts below verbatim. Rephrase them in your own words — the AI will figure out what you need.
 
 ---
+
+# Part 1 — Grove
 
 ## Background
 
@@ -136,6 +138,36 @@ spec:
 
 ---
 
+# Part 2 — Planner
+
+## Background
+
+The Dynamo Planner is an SLA-driven autoscaler for disaggregated LLM serving. It reads metrics from Prometheus, predicts future load, and scales prefill/decode workers to meet SLA targets. When the Planner decides to scale, it writes new replica counts to the `DynamoGraphDeployment`, which Grove turns into pods.
+
+In this lab the workers are mock inference engines (no real GPUs).
+
+---
+
+## Exercise 3 — See what you have
+
+Ask the AI to show you the current state of the deployment.
+
+### Prompt
+
+```text
+Show me the Planner configuration from the DynamoGraphDeployment in the
+dynamo-lab namespace. What are the SLA targets and how many replicas does
+each service have? Then list all the pods running in the namespace.
+```
+
+### What you should learn
+
+- The Planner is configured with `"ttft":2000` (TTFT target) and `"itl":200` (ITL target)
+- Each service (Frontend, Planner, PrefillWorker, DecodeWorker) has 1 replica
+- There are 4 pods running — one per service
+
+---
+
 ## Key Takeaways
 
 1. **Grove is not user-facing** — users deploy a `DynamoGraphDeployment`, Grove resources are created automatically by the operator
@@ -143,3 +175,5 @@ spec:
 3. **PodCliques encode topology** — labels on PodCliques tell the scheduler what role each pod plays
 4. **PodGangs enforce atomicity** — the scheduler either places the entire gang or none of it
 5. **Topology constraints control placement** — `topologyConstraint.packDomain` ensures pods land in the same physical domain (NVSwitch, rack, etc.). Without it, K8s schedules wherever it fits
+6. **The Planner is a control loop** — it runs every 30 seconds, reads from Prometheus, and writes replica counts to the DGD
+7. **SLA targets drive scaling** — when observed TTFT or ITL approaches the target, the Planner adds workers automatically

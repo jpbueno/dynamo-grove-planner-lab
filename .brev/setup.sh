@@ -359,8 +359,7 @@ Dynamo Grove & Planner Lab — Ready!
   Registry:     http://$REGISTRY_IP:5000
 
   Exercises:
-    cat $LAB_DIR/grove-exercise.md
-    cat $LAB_DIR/planner-exercise.md
+    cat $LAB_DIR/lab-exercises.md
 
   Quick test:
     python3 $LAB_DIR/load-gen.py --url http://${FRONTEND_IP}:8000 --rps 5 --duration 90
