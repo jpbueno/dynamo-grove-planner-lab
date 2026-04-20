@@ -1,6 +1,6 @@
 # Lab Exercise: Grove — Exploring Topology & Gang Scheduling with AI
 
-**Duration:** ~12 minutes  
+**Duration:** ~10 minutes  
 **Namespace:** `dynamo-lab`  
 **Tools:** Claude Code (CLI) or Cursor
 
@@ -50,7 +50,7 @@ The key resources Grove creates:
 
 ## Exercise 1 — Discover the Grove resources
 
-Ask your AI assistant to list the Grove resources that the operator created from your DynamoGraphDeployment.
+Ask your AI assistant to list the Grove resources that the operator created from your DynamoGraphDeployment, then trace the ownership chain back up to the DGD.
 
 ### Prompt
 
@@ -65,11 +65,11 @@ dynamo-lab namespace. Explain what each one is and how they relate to each other
 - There are four **PodClique** objects — one per component (frontend, planner, prefill worker, decode worker)
 - There is one **PodGang** named `dynamo-lab-0` — the gang scheduling unit for replica set 0
 
-**Follow-up prompt to go deeper:**
+### Follow-up prompt
 
 ```text
 Show me the ownership chain from one of the worker pods all the way up to the
-DynamoGraphDeployment. What owns what?
+DynamoGraphDeployment. What owns what and who created what?
 ```
 
 The full ownership chain:
@@ -114,7 +114,7 @@ component's role and scheduling queue?
   - `nvidia.com/selector` → e.g., `dynamo-lab-decodeworker`
   - `kai.scheduler/queue` → `dynamo` (the KAI Scheduler queue)
 
-**Follow-up prompt to explore topology:**
+### Follow-up prompt
 
 ```text
 If I wanted to add a topology constraint to this deployment so that prefill and
@@ -136,41 +136,10 @@ spec:
 
 ---
 
-## Exercise 3 — Read the startup ordering
-
-Gang scheduling isn't just about placement — it also controls startup sequencing. Ask the AI how this deployment handles component startup order.
-
-### Prompt
-
-```text
-What startup ordering strategy is the PodCliqueSet in dynamo-lab using? List all
-the cliques with their role names, replica counts, and minAvailable thresholds.
-```
-
-### What you should learn
-
-- The startup type is `CliqueStartupTypeAnyOrder` — all four components can start in any order
-- Each clique has `minAvailable: 1` and `replicas: 1`
-
-**Follow-up prompt:**
-
-```text
-When would you use CliqueStartupTypeOrdered instead of AnyOrder? What are the
-tradeoffs?
-```
-
-The AI should explain:
-
-- **AnyOrder** is fine for this lab — our mocker containers start instantly
-- **Ordered** is used in production GPU clusters where startup is expensive. It prevents wasted GPU memory reservations by ensuring dependencies (like etcd or the router) are healthy before GPU-heavy workers start
-- The tradeoff: ordered startup is slower but avoids expensive failures; any-order is faster but risks cascading restarts if a dependency isn't ready
-
----
-
 ## Key Takeaways
 
 1. **Grove is not user-facing** — users deploy a `DynamoGraphDeployment`, Grove resources are created automatically by the operator
-2. **PodCliques encode topology** — labels on PodCliques tell the scheduler what role each pod plays
-3. **PodGangs enforce atomicity** — the scheduler either places the entire gang or none of it
-4. **Topology constraints control placement** — `topologyConstraint.packDomain` ensures pods land in the same physical domain (NVSwitch, rack, etc.). Without it, K8s schedules wherever it fits
-5. **Startup ordering is a gang-level concern** — `AnyOrder` vs. `Ordered` controls whether components can boot concurrently or must wait for dependencies
+2. **The ownership chain is explicit** — DGD → PodCliqueSet → PodClique → PodGang / Pods. You can trace any pod back to its parent DGD
+3. **PodCliques encode topology** — labels on PodCliques tell the scheduler what role each pod plays
+4. **PodGangs enforce atomicity** — the scheduler either places the entire gang or none of it
+5. **Topology constraints control placement** — `topologyConstraint.packDomain` ensures pods land in the same physical domain (NVSwitch, rack, etc.). Without it, K8s schedules wherever it fits
